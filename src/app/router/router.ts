@@ -1,0 +1,90 @@
+import { createRouter, createWebHistory } from 'vue-router';
+const router = createRouter({
+    history: createWebHistory(import.meta.env.BASE_URL),
+    routes: [
+        {
+            path: '/',
+            name: 'site',
+            component: () => import('@/pages/Index.vue'),
+            meta: {
+                layout: 'site'
+            }
+        },
+        {
+            path: '/registration',
+            name: 'registration',
+            component: () => import('@/pages/Registration.vue'),
+            meta: {
+                layout: 'login'
+            }
+        },
+        {
+            path: '/login',
+            name: 'login',
+            component: () => import('@/pages/Login.vue'),
+            meta: {
+                layout: 'login'
+            }
+        },
+        {
+            path: '/contracts/templates',
+            name: 'contract-templates',
+            component: () => import('@/pages/ContractTemplates.vue'),
+            meta: {
+                layout: 'contracts'
+            }
+        },
+        {
+            path: '/contracts/templates/:template_name/contract_id/step-one',
+            name: 'contract-templates-one',
+            component: () => import('@/pages/ContractTemplateName.vue'),
+            meta: {
+                layout: 'contracts'
+            }
+        },
+
+        {
+            path: '/contracts/templates/:template_name/contract_id/step-two',
+            name: 'contract-templates-two',
+            component: () => import('@/pages/ContractTemplateBody.vue'),
+            meta: {
+                layout: 'contracts'
+            }
+        },
+        {
+            path: '/contracts/:template_name/contract_id/step-three',
+            name: 'contract-templates-three',
+            component: () => import('@/pages/ContractTemplateStamp.vue'),
+            meta: {
+                layout: 'contracts'
+            }
+        },
+        {
+            path: '/chat/:chat_id',
+            name: 'chat',
+            component: () => import('@/pages/Chat.vue'),
+            meta: {
+                layout: 'chat'
+            }
+        },
+        {
+            path: '/chat/analytic/chat_id',
+            name: 'chat-analytic',
+            component: () => import('@/pages/ChatAnalytic.vue'),
+            meta: {
+                layout: 'chat'
+            }
+        },
+        {
+            path: '/chat/settings',
+            name: 'chat-settings',
+            component: () => import('@/pages/ChatSettings.vue'),
+            meta: {
+                layout: 'chat'
+            }
+        },
+    ]
+})
+
+
+export default router;

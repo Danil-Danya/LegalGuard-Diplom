@@ -1,0 +1,90 @@
+$xl: 1220px;
+$lg: 992px;
+$md: 768px;
+$sm: 576px;
+$xs: 435px;
+$desktop: 1280px;
+$padding-xl: 40px;
+$padding-lg: 32px;
+$padding-md: 20px;
+$padding-sm: 16px;
+$padding-xs: 12px;
+
+@mixin media($size) {
+    @media (max-width: $size) {
+        @content;
+    }
+}
+
+.wrapper {
+    width: 100%;
+    max-width: $desktop;
+    margin: 0 auto;
+    padding-inline: $padding-xl;
+}
+
+.container {
+    width: 100%;
+    margin: 0 auto;
+    padding-inline: $padding-xl;
+}
+
+.wrapper {
+    min-height: 100%;
+}
+
+.wrapper-full {
+    max-width: 100%;
+}
+
+.wrapper-narrow {
+    max-width: 960px;
+}
+
+.wrapper {
+    @include media($xl) {
+        max-width: $xl;
+        padding-inline: $padding-lg;
+    }
+
+    @include media($lg) {
+        max-width: $lg;
+        padding-inline: $padding-md;
+    }
+
+    @include media($md) {
+        max-width: $md;
+        padding-inline: $padding-md;
+    }
+
+    @include media($sm) {
+        max-width: 100%;
+        padding-inline: $padding-sm;
+    }
+
+    @include media($xs) {
+        padding-inline: $padding-xs;
+    }
+}
+
+.container {
+    @include media($xl) {
+        padding-inline: $padding-lg;
+    }
+
+    @include media($lg) {
+        padding-inline: $padding-md;
+    }
+
+    @include media($md) {
+        padding-inline: $padding-md;
+    }
+
+    @include media($sm) {
+        padding-inline: $padding-sm;
+    }
+
+    @include media($xs) {
+        padding-inline: $padding-xs;
+    }
+}
