@@ -30,15 +30,39 @@ export interface ContractPayloadSection {
     description: string;
 }
 
+export interface ContractPayloadBodyItem {
+    number: string;
+    title: string;
+    text: string;
+}
+
+export interface ContractPayloadBodySection {
+    number: string;
+    title: string;
+    text: string;
+    items: ContractPayloadBodyItem[];
+}
+
+export interface ContractPayloadPartyField {
+    title: string;
+    text: string;
+}
+
+export interface ContractPayloadParty {
+    key: string;
+    title: string;
+    fields: ContractPayloadPartyField[];
+}
+
 export interface ContractDocumentPayload {
     templateSlug: string;
     title: string;
     documentDate: string;
+    documentPlace: string;
     firstParty: string;
     secondParty: string;
-    signatureLabel: string;
-    description: string[];
-    sections: ContractPayloadSection[];
+    body: ContractPayloadBodySection[];
+    parties: ContractPayloadParty[];
     signatureFileName: string | null;
     attachmentFileName: string | null;
 }

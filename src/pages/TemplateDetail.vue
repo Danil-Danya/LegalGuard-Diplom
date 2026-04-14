@@ -129,6 +129,16 @@
                 </div>
 
                 <div
+                    v-else-if="isLoadingTemplate"
+                    class="rounded-[18px] border border-[var(--color-border)] bg-white p-[24px] text-[var(--color-text-primary)]"
+                >
+                    <h1 class="text-[32px] font-semibold">Загрузка шаблона</h1>
+                    <p class="mt-[12px] text-[17px] leading-[28px] text-[var(--color-text-secondary)]">
+                        Получаем данные шаблона из API.
+                    </p>
+                </div>
+
+                <div
                     v-else
                     class="rounded-[18px] border border-[var(--color-border)] bg-white p-[24px] text-[var(--color-text-primary)]"
                 >
@@ -153,21 +163,38 @@
 </template>
 
 <script setup lang="ts">
-    import { computed } from 'vue';
+    import { computed, watch } from 'vue';
     import { useRoute } from 'vue-router';
 
-    import { getTemplateBySlug } from '@/entities/templates/lib/catalog';
+    import { useTemplatesStore } from '@/entities/templates/models/store';
     import MobileChatTabbar from '@/shared/layout/MobileChatTabbar.vue';
     import Breadcrumbs from '@/shared/ui/Breadcrumbs.vue';
     import Button from '@/shared/ui/Button.vue';
 
     const route = useRoute();
+    const templatesStore = useTemplatesStore();
+
+    const slug = computed(() => {
+        const routeSlug = Array.isArray(route.params.slug) ? route.params.slug[0] : route.params.slug;
+        return routeSlug || '';
+    });
 
     const template = computed(() => {
-        const slug = Array.isArray(route.params.slug) ? route.params.slug[0] : route.params.slug;
-
-        return slug ? getTemplateBySlug(slug) : undefined;
+        const currentTemplate = slug.value ? templatesStore.templateBySlug[slug.value] : undefined;
+        return currentTemplate?.templateSchema ? currentTemplate : undefined;
     });
+
+    const isLoadingTemplate = computed(() => {
+        return templatesStore.isLoadingTemplate;
+    });
+
+    watch(slug, async (nextSlug) => {
+        if (!nextSlug) {
+            return;
+        }
+
+        await templatesStore.fetchTemplateBySlug(nextSlug);
+    }, { immediate: true });
 
     const breadcrumbsLinks = computed(() => {
         if (!template.value) {

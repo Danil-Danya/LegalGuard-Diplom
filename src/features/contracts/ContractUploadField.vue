@@ -6,15 +6,15 @@
 
         <button
             type="button"
-            class="!mt-[10px] flex min-h-[126px] w-full flex-col items-start justify-between rounded-[10px] border border-dashed bg-white !p-[16px] text-left transition-colors"
+            class="!mt-[10px] flex min-h-[126px] w-full max-w-full flex-col items-start justify-between rounded-[10px] border border-dashed bg-white !p-[16px] text-left transition-colors"
             :class="hasError ? 'border-[var(--color-danger)] bg-[var(--color-danger-10)]' : 'border-[var(--color-primary-30)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-10)]'"
             @click="openDialog"
         >
-            <div class="space-y-[8px]">
-                <p class="text-[16px] font-semibold text-[var(--color-text-primary)]">
+            <div class="w-full space-y-[8px]">
+                <p class="break-words text-[16px] font-semibold text-[var(--color-text-primary)]">
                     {{ modelValue?.name || label }}
                 </p>
-                <p class="text-[14px] leading-[22px] text-[var(--color-text-secondary)]">
+                <p class="break-words text-[14px] leading-[22px] text-[var(--color-text-secondary)]">
                     {{ description }}
                 </p>
             </div>

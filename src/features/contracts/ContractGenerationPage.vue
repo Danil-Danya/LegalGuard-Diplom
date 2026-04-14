@@ -1,9 +1,8 @@
 <template>
-    <section class="pb-[56px] pt-[24px] md:pb-[80px]">
+    <section class="pb-[188px] pt-[24px] md:pb-[80px]">
         <Breadcrumbs :links="breadcrumbsLinks" />
         <div class="container">
-            <div v-if="template" class="space-y-[24px]">
-
+            <div v-if="resolvedTemplate" class="space-y-[24px]">
                 <div class="rounded-[22px] border border-[var(--color-border)] !m-[30px_0] bg-white !p-[24px] max-md:!p-[18px]">
                     <div class="flex flex-wrap items-start justify-between gap-[16px] border-b border-[var(--color-border)] pb-[20px]">
                         <div class="max-w-[760px]">
@@ -34,9 +33,26 @@
                         <section class="min-w-0 rounded-[18px] bg-[var(--color-surface)] !p-[18px]">
                             <div class="grid gap-[16px] grid-cols-1">
                                 <ContractFieldRenderer
-                                    v-for="field in currentStep.fields"
+                                    v-for="field in regularFields"
                                     :key="field.key"
+                                    :document-type="resolvedTemplate.title"
                                     :field="field"
+                                    :hint-template-context="hintTemplateContext"
+                                    :model-value="resolveFieldValue(field.key)"
+                                    @update:model-value="contractStore.setFieldValue(field.key, $event)"
+                                />
+                            </div>
+
+                            <div
+                                v-if="fileFields.length"
+                                class="grid grid-cols-1 gap-[16px] !mt-[16px]"
+                            >
+                                <ContractFieldRenderer
+                                    v-for="field in fileFields"
+                                    :key="field.key"
+                                    :document-type="resolvedTemplate.title"
+                                    :field="field"
+                                    :hint-template-context="hintTemplateContext"
                                     :model-value="resolveFieldValue(field.key)"
                                     @update:model-value="contractStore.setFieldValue(field.key, $event)"
                                 />
@@ -60,13 +76,27 @@
                             </div>
                         </section>
 
-                        <ContractPreviewSheet
-                            :attachment-file="attachmentFile"
-                            :payload="previewPayload"
-                            :signature-file="signatureFile"
-                        />
+                        <div class="hidden md:block">
+                            <ContractPreviewSheet
+                                :attachment-file="attachmentFile"
+                                :payload="previewPayload"
+                                :signature-file="signatureFile"
+                            />
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <div
+                v-else-if="isLoadingTemplate"
+                class="rounded-[18px] border border-[var(--color-border)] bg-white p-[24px]"
+            >
+                <h1 class="text-[32px] font-semibold text-[var(--color-text-primary)]">
+                    Загрузка шаблона
+                </h1>
+                <p class="mt-[12px] text-[16px] leading-[26px] text-[var(--color-text-secondary)]">
+                    Получаем структуру документа из API и собираем шаги формы.
+                </p>
             </div>
 
             <div
@@ -87,17 +117,87 @@
                 </RouterLink>
             </div>
         </div>
+
+        <div
+            v-if="resolvedTemplate"
+            class="fixed bottom-[102px] left-[15px] right-[15px] z-20 md:hidden"
+        >
+            <button
+                type="button"
+                class="flex min-h-[56px] !p-[15px] w-full items-center justify-between rounded-[8px] border border-[var(--color-border)] bg-white/95 px-[18px] py-[14px] text-left shadow-[0_12px_28px_rgba(45,51,56,0.12)] backdrop-blur-[14px]"
+                @click="openMobilePreview"
+            >
+                <div>
+                    <p class="text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--color-primary)]">
+                        Документ
+                    </p>
+                    <p class="mt-[4px] text-[15px] font-medium text-[var(--color-text-primary)]">
+                        Развернуть документ
+                    </p>
+                </div>
+
+                <span class="inline-flex h-[34px] min-w-[34px] items-center justify-center rounded-full bg-[var(--color-primary-10)] px-[10px] text-[13px] font-semibold text-[var(--color-primary)]">
+                    A4
+                </span>
+            </button>
+        </div>
+
+        <div
+            v-if="resolvedTemplate"
+            class="fixed bottom-[15px] left-[15px] right-[15px] z-20 md:hidden"
+        >
+            <MobileChatTabbar />
+        </div>
+
+        <Transition name="contract-preview-modal">
+            <div
+                v-if="isMobilePreviewOpen"
+                class="fixed inset-0 z-[90] bg-[rgba(17,24,39,0.42)] !p-[12px] md:hidden"
+                @click.self="closeMobilePreview"
+            >
+                <div class="mx-auto flex h-full max-w-[520px] !p-[10px] flex-col overflow-hidden rounded-[8px] bg-white shadow-[0_24px_80px_rgba(20,20,20,0.28)]">
+                    <div class="flex items-center justify-between border-b !mt-[10px] border-[var(--color-border)] px-[18px] py-[16px]">
+                        <div>
+                            <p class="text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--color-primary)]">
+                                Документ
+                            </p>
+                            <p class="mt-[4px] text-[15px] font-medium text-[var(--color-text-primary)]">
+                                Предпросмотр A4
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            aria-label="Закрыть предпросмотр документа"
+                            class="inline-flex h-[38px] min-w-[38px] items-center justify-center rounded-full border border-[var(--color-border)] px-[12px] text-[22px] leading-none font-medium text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                            @click="closeMobilePreview"
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto bg-[var(--color-surface)] p-[12px] !mt-[10px]">
+                        <ContractPreviewSheet
+                            :attachment-file="attachmentFile"
+                            :payload="previewPayload"
+                            :signature-file="signatureFile"
+                        />
+                    </div>
+                </div>
+            </div>
+        </Transition>
     </section>
 </template>
 
 <script setup lang="ts">
-    import { computed, watch } from 'vue';
+    import { computed, onBeforeUnmount, ref, watch } from 'vue';
     import { useRoute } from 'vue-router';
 
-    import { buildContractPayload, buildContractStepSchemas } from '@/entities/contracts/lib/schema';
+    import { buildContractPayload, buildContractStepSchemas, buildHintTemplateContext } from '@/entities/contracts/lib/schema';
     import type { ContractDocumentPayload, ContractFieldValue, ContractStep, ContractStepSchema } from '@/entities/contracts/lib/types';
     import { useContractStore } from '@/entities/contracts/models/store';
-    import { getTemplateBySlug } from '@/entities/templates/lib/catalog';
+    import { useTemplatesStore } from '@/entities/templates/models/store';
+    import MobileChatTabbar from '@/shared/layout/MobileChatTabbar.vue';
     import Breadcrumbs from '@/shared/ui/Breadcrumbs.vue';
 
     import ContractFieldRenderer from './ContractFieldRenderer.vue';
@@ -109,6 +209,8 @@
 
     const route = useRoute();
     const contractStore = useContractStore();
+    const templatesStore = useTemplatesStore();
+    const isMobilePreviewOpen = ref(false);
 
     const templateSlug = computed(() => {
         const routeValue = Array.isArray(route.params.template_name) ? route.params.template_name[0] : route.params.template_name;
@@ -116,10 +218,26 @@
     });
 
     const template = computed(() => {
-        return getTemplateBySlug(templateSlug.value);
+        return templateSlug.value ? templatesStore.templateBySlug[templateSlug.value] : undefined;
     });
 
-    watch(template, (nextTemplate) => {
+    const resolvedTemplate = computed(() => {
+        return template.value?.templateSchema ? template.value : undefined;
+    });
+
+    const isLoadingTemplate = computed(() => {
+        return templatesStore.isLoadingTemplate;
+    });
+
+    watch(templateSlug, async (nextSlug) => {
+        if (!nextSlug) {
+            return;
+        }
+
+        await templatesStore.fetchTemplateBySlug(nextSlug);
+    }, { immediate: true });
+
+    watch(resolvedTemplate, (nextTemplate) => {
         if (!nextTemplate) {
             return;
         }
@@ -127,8 +245,22 @@
         contractStore.initializeTemplate(nextTemplate);
     }, { immediate: true });
 
+    watch(isMobilePreviewOpen, (isOpen) => {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        document.body.style.overflow = isOpen ? 'hidden' : '';
+    });
+
+    onBeforeUnmount(() => {
+        if (typeof document !== 'undefined') {
+            document.body.style.overflow = '';
+        }
+    });
+
     const stepSchemas = computed(() => {
-        return template.value ? buildContractStepSchemas(template.value) : [];
+        return resolvedTemplate.value ? buildContractStepSchemas(resolvedTemplate.value) : [];
     });
 
     const emptyStep: ContractStepSchema = {
@@ -147,8 +279,16 @@
         return contractStore.values[key] ?? '';
     };
 
+    const regularFields = computed(() => {
+        return currentStep.value.fields.filter((field) => field.type !== 'file');
+    });
+
+    const fileFields = computed(() => {
+        return currentStep.value.fields.filter((field) => field.type === 'file');
+    });
+
     const breadcrumbsLinks = computed(() => {
-        if (!template.value) {
+        if (!resolvedTemplate.value) {
             return [
                 { path: '/', text: 'Домашняя' },
                 { path: '/contracts/templates', text: 'Шаблоны документов' },
@@ -158,28 +298,36 @@
         return [
             { path: '/', text: 'Домашняя' },
             { path: '/contracts/templates', text: 'Шаблоны документов' },
-            { path: `/template/${template.value.slug}`, text: template.value.title },
+            { path: `/template/${resolvedTemplate.value.slug}`, text: resolvedTemplate.value.title },
             { path: route.path, text: `Шаг ${props.step}` },
         ];
     });
 
     const previewPayload = computed(() => {
-        if (!template.value) {
+        if (!resolvedTemplate.value) {
             return {
                 templateSlug: '',
                 title: '',
                 documentDate: '',
+                documentPlace: '',
                 firstParty: '',
                 secondParty: '',
-                signatureLabel: '',
-                description: [],
-                sections: [],
+                body: [],
+                parties: [],
                 signatureFileName: null,
                 attachmentFileName: null,
             } as ContractDocumentPayload;
         }
 
-        return buildContractPayload(template.value, contractStore.values);
+        return buildContractPayload(resolvedTemplate.value, contractStore.values);
+    });
+
+    const hintTemplateContext = computed(() => {
+        if (!resolvedTemplate.value) {
+            return {};
+        }
+
+        return buildHintTemplateContext(resolvedTemplate.value, contractStore.values);
     });
 
     const signatureFile = computed(() => {
@@ -193,35 +341,35 @@
     });
 
     const previousPath = computed(() => {
-        if (!template.value) {
+        if (!resolvedTemplate.value) {
             return '';
         }
 
         if (props.step === 1) {
-            return `/template/${template.value.slug}`;
+            return `/template/${resolvedTemplate.value.slug}`;
         }
 
         if (props.step === 2) {
-            return `/contracts/templates/${template.value.slug}/contract_id/step-one`;
+            return `/contracts/templates/${resolvedTemplate.value.slug}/contract_id/step-one`;
         }
 
-        return `/contracts/templates/${template.value.slug}/contract_id/step-two`;
+        return `/contracts/templates/${resolvedTemplate.value.slug}/contract_id/step-two`;
     });
 
     const nextPath = computed(() => {
-        if (!template.value) {
+        if (!resolvedTemplate.value) {
             return '/contracts/templates';
         }
 
         if (props.step === 1) {
-            return `/contracts/templates/${template.value.slug}/contract_id/step-two`;
+            return `/contracts/templates/${resolvedTemplate.value.slug}/contract_id/step-two`;
         }
 
         if (props.step === 2) {
-            return `/contracts/${template.value.slug}/contract_id/step-three`;
+            return `/contracts/${resolvedTemplate.value.slug}/contract_id/step-three`;
         }
 
-        return `/template/${template.value.slug}`;
+        return `/template/${resolvedTemplate.value.slug}`;
     });
 
     const nextLabel = computed(() => {
@@ -235,4 +383,34 @@
             { step: 3, shortLabel: '03' },
         ];
     });
+
+    const openMobilePreview = () => {
+        isMobilePreviewOpen.value = true;
+    };
+
+    const closeMobilePreview = () => {
+        isMobilePreviewOpen.value = false;
+    };
 </script>
+
+<style scoped>
+    .contract-preview-modal-enter-active,
+    .contract-preview-modal-leave-active {
+        transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .contract-preview-modal-enter-from,
+    .contract-preview-modal-leave-to {
+        opacity: 0;
+    }
+
+    .contract-preview-modal-enter-from > div,
+    .contract-preview-modal-leave-to > div {
+        transform: translateY(18px);
+    }
+
+    .contract-preview-modal-enter-active > div,
+    .contract-preview-modal-leave-active > div {
+        transition: transform 220ms ease;
+    }
+</style>
