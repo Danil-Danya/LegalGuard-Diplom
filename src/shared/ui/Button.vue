@@ -1,5 +1,6 @@
 <template>
     <button
+        :disabled="disabled"
         class="button inline-flex items-center justify-center rounded-[10px] text-[16px] leading-[20px] duration-[300ms] cursor-pointer transition-colors"
         :class="variantClass"
         :style="{ padding: normalizedPadding }"
@@ -15,8 +16,10 @@
         color: string;
         text: string;
         padding?: string;
+        disabled?: boolean;
     }>(), {
         padding: '12px_32px',
+        disabled: false,
     });
 
     const variantClass = computed(() => {

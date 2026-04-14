@@ -3,7 +3,8 @@
         <label class="uppercase tracking-[1px] !text-[12px]">{{ label }}</label>
         <select
             :value="modelValue"
-            class="input w-full min-w-0 !p-[12px_16px] rounded-[4px] border border-transparent bg-soft-blue text-[16px] outline-none transition-colors focus:border-accent !mt-[10px]"
+            class="input w-full min-w-0 !p-[12px_16px] rounded-[4px] border bg-soft-blue text-[16px] outline-none transition-colors !mt-[10px]"
+            :class="hasError ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)]' : 'border-transparent focus:border-accent'"
             @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
         >
             <option v-if="placeholder" disabled value="">{{ placeholder }}</option>
@@ -15,13 +16,13 @@
                 {{ option.label }}
             </option>
         </select>
-        <ErrorMessage :text="errorText" v-if="errorText" />
+        <ErrorMessage :text="props.errorText" v-if="hasError" />
     </div>
 </template>
 
 <script setup lang="ts">
 
-    import { computed, ref } from 'vue';
+    import { computed } from 'vue';
 
     import ErrorMessage from './ErrorMessage.vue';
 
@@ -30,16 +31,16 @@
         value: string;
     }
 
-    const errorText = ref('');
-
     const props = withDefaults(defineProps<{
         label: string;
         placeholder?: string;
         modelValue?: string;
         options: Array<string | SelectOption>;
+        errorText?: string;
     }>(), {
         placeholder: '',
         modelValue: '',
+        errorText: '',
     });
 
     const emit = defineEmits<{
@@ -57,6 +58,10 @@
 
             return option;
         });
+    });
+
+    const hasError = computed(() => {
+        return Boolean(props.errorText);
     });
 
 </script>

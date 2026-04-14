@@ -5,8 +5,9 @@
 </template>
 
 <script setup lang="ts">
-    import { computed } from 'vue';
+    import { computed, onMounted } from 'vue';
     import { useRoute } from 'vue-router';
+    import { useUserStore } from '@/entities/users/models/store';
 
     import ChatLayout from '@/layout/ChatLayout.vue';
     import SiteLayout from '@/layout/SiteLayout.vue';
@@ -14,6 +15,7 @@
     import ContractLayout from '@/layout/ContractLayout.vue';
 
     const route = useRoute();
+    const userStore = useUserStore();
 
     const layouts = {
         chat: ChatLayout,
@@ -26,4 +28,9 @@
     const layout = computed(() => {
         return layouts[route.meta.layout as keyof typeof layouts] || SiteLayout;
     });
+
+    onMounted(async () =>{
+        await userStore.fetchProfile();
+    })
+
 </script>

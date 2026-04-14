@@ -5,7 +5,7 @@ const router = createRouter({
         {
             path: '/',
             name: 'site',
-            component: () => import('@/pages/Index.vue'),
+            component: () => import('@/pages/index/Index.vue'),
             meta: {
                 layout: 'site'
             }
@@ -27,9 +27,33 @@ const router = createRouter({
             }
         },
         {
+            path: '/profile/create',
+            name: 'profile-create',
+            component: () => import('@/pages/ProfileCreate.vue'),
+            meta: {
+                layout: 'login'
+            }
+        },
+        {
+            path: '/chat/new-chat',
+            name: 'chat-new',
+            component: () => import('@/pages/Chat.vue'),
+            meta: {
+                layout: 'chat'
+            }
+        },
+        {
             path: '/contracts/templates',
             name: 'contract-templates',
             component: () => import('@/pages/ContractTemplates.vue'),
+            meta: {
+                layout: 'contracts'
+            }
+        },
+        {
+            path: '/template/:slug',
+            name: 'template-detail',
+            component: () => import('@/pages/TemplateDetail.vue'),
             meta: {
                 layout: 'contracts'
             }

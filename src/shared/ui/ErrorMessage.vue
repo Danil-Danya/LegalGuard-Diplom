@@ -1,5 +1,5 @@
 <template>
-    <p class="error-message">{{ text }}</p>
+    <p class="error-message !mt-[8px] text-[13px] leading-[18px] text-[var(--color-danger)]">{{ text }}</p>
 </template>
 
 <script setup lang="ts">

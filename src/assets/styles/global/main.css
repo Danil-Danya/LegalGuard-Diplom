@@ -7,6 +7,10 @@
     --breakpoint-sm: 576px;
     --breakpoint-xs: 435px;
 
+    --font-brand: Manrope, sans-serif;
+    --tracking-brand: 0.04em;
+    --tracking-marker: 0.08em;
+
     --color-bg: #F2F4F6;
     --color-surface: #FFFFFF;
     --color-surface-muted: #F5F5F4;
@@ -18,6 +22,10 @@
     --color-primary-20: rgba(118, 89, 44, 0.2);
     --color-primary-10: rgba(118, 89, 44, 0.1);
 
+    --color-danger: #B64033;
+    --color-danger-20: rgba(182, 64, 51, 0.2);
+    --color-danger-10: rgba(182, 64, 51, 0.1);
+
     --color-secondary: #615B35;
     --color-secondary-80: rgba(97, 91, 53, 0.8);
 
@@ -25,6 +33,7 @@
 
     --color-text-primary: #2D3338;
     --color-text-secondary: #596065;
+    --color-text-subtle: rgba(45, 51, 56, 0.42);
     --color-text-muted: #6B7280;
 
     --color-hover: #ACB3B8;

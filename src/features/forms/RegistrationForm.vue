@@ -3,59 +3,167 @@
         <div class="login__form-top flex flex-col items-center justify-center text-center">
             <img src="@/assets/images/logo/logo.png" alt="logo" class="login__logo w-[64px] max-sm:w-[56px] max-xs:w-[48px]">
             <h3 class="title max-sm:!text-[30px] max-sm:!leading-[34px] max-xs:!text-[26px] max-xs:!leading-[30px]">LegalGuard AI</h3>
-            <p class="text text-accent !mt-[10px] max-w-[520px] text-center max-sm:text-[14px] max-sm:leading-[20px]">ВАШ ЛИЧНЫЙ ИИ ПОМОЩНИК В ЮРИДИЧЕСКИХ СФЕРАХ</p>
+            <p class="text text-accent !mt-[10px] max-w-[520px] text-center max-sm:text-[14px] max-sm:leading-[20px]">
+                Создайте аккаунт, чтобы перейти к заполнению профиля и работе с системой.
+            </p>
         </div>
+
         <div class="login__form-body !mt-[30px] max-sm:!mt-6">
-            <form class="login__form-form flex flex-col gap-[20px]">
+            <form class="login__form-form flex flex-col gap-[20px]" @submit.prevent="handleSubmit">
                 <div class="login__form-input-container">
-                    <Input label="Ваша почта" placeholder="example@mail.com" />
-                </div>
-
-                <div class="login__form-input-container flex gap-[20px] max-sm:flex-col">
-                    <Input label="Ваше имя" placeholder="Например Данил" class="w-1/2 max-sm:w-full" />
-                    <Input label="Ваша фамилия" placeholder="Например Сабитов" class="w-1/2 max-sm:w-full" />
-                </div>
-
-                <div class="login__form-input-container flex gap-[20px] max-sm:flex-col">
-                    <Input label="Ваш пароль" placeholder="********" class="w-1/2 max-sm:w-full" />
-                    <Input label="Повторите пароль" placeholder="********" class="w-1/2 max-sm:w-full" />
-                </div>
-
-                <div class="login__form-input-container">
-                    <Select
-                        label="Ваш рабочий статус"
-                        placeholder="Выберите статус"
-                        :options="workStatusOptions"
+                    <Input
+                        v-model="form.email"
+                        :error-text="fieldErrors.email"
+                        label="Ваша почта"
+                        placeholder="example@mail.com"
+                        type="email"
                     />
                 </div>
 
+                <div class="login__form-input-container flex gap-[20px] max-sm:flex-col">
+                    <Input
+                        v-model="form.password"
+                        :error-text="fieldErrors.password"
+                        label="Ваш пароль"
+                        placeholder="********"
+                        type="password"
+                        class="w-1/2 max-sm:w-full"
+                    />
+                    <Input
+                        v-model="form.confirmPassword"
+                        :error-text="fieldErrors.confirmPassword"
+                        label="Повторите пароль"
+                        placeholder="********"
+                        type="password"
+                        class="w-1/2 max-sm:w-full"
+                    />
+                </div>
+
+                <ErrorMessage v-if="submitError" :text="submitError" />
+
                 <div class="login__form-button-container flex justify-center">
-                    <Button class="max-xs:w-full" text="Зарегистрироваться" color="brown" />
+                    <Button
+                        class="max-xs:w-full disabled:cursor-not-allowed disabled:opacity-60"
+                        :disabled="isSubmitting"
+                        :text="isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'"
+                        color="brown"
+                    />
                 </div>
             </form>
         </div>
+
         <div class="login__form-end mt-6 flex justify-center">
             <p class="text-center text-[14px] leading-[20px] text-[var(--color-text-secondary)] max-xs:text-[13px]">
                 У вас уже есть учетная запись?
-                <Link path="/login" text="Войти"></Link>
+                <Link path="/login" text="Войти" />
             </p>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-    import Link from '@/shared/ui/Link.vue';
-    import Input from '@/shared/ui/Input.vue';
-    import Select from '@/shared/ui/Select.vue';
-    import Button from '@/shared/ui/Button.vue';
+    import { reactive, ref, watch } from 'vue';
+    import { useRouter } from 'vue-router';
 
-    const workStatusOptions = [
-        'Юрист',
-        'Адвокат',
-        'Нотариус',
-        'Предприниматель',
-        'Самозанятый',
-        'Физ лицо',
-        'Другое',
-    ];
+    import {
+        DEFAULT_REGISTRATION_ROLE_ID,
+        getAuthRequestErrorMessage,
+        registerUser,
+        storeAuthSession,
+    } from '@/entities/users/api/auth';
+    import Button from '@/shared/ui/Button.vue';
+    import ErrorMessage from '@/shared/ui/ErrorMessage.vue';
+    import Input from '@/shared/ui/Input.vue';
+    import Link from '@/shared/ui/Link.vue';
+
+    const router = useRouter();
+
+    const isSubmitting = ref(false);
+    const submitError = ref('');
+
+    const form = reactive({
+        email: '',
+        password: '',
+        confirmPassword: '',
+    });
+
+    const fieldErrors = reactive({
+        email: '',
+        password: '',
+        confirmPassword: '',
+    });
+
+    watch(() => form.email, () => {
+        fieldErrors.email = '';
+        submitError.value = '';
+    });
+
+    watch(() => form.password, () => {
+        fieldErrors.password = '';
+        submitError.value = '';
+    });
+
+    watch(() => form.confirmPassword, () => {
+        fieldErrors.confirmPassword = '';
+        submitError.value = '';
+    });
+
+    const validateForm = () => {
+        fieldErrors.email = '';
+        fieldErrors.password = '';
+        fieldErrors.confirmPassword = '';
+
+        if (!form.email.trim()) {
+            fieldErrors.email = 'Введите email.';
+        }
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+            fieldErrors.email = 'Введите корректный email.';
+        }
+
+        if (!form.password) {
+            fieldErrors.password = 'Введите пароль.';
+        }
+        else if (form.password.length < 8) {
+            fieldErrors.password = 'Пароль должен содержать минимум 8 символов.';
+        }
+
+        if (!form.confirmPassword) {
+            fieldErrors.confirmPassword = 'Повторите пароль.';
+        }
+        else if (form.password !== form.confirmPassword) {
+            fieldErrors.confirmPassword = 'Пароли не совпадают.';
+        }
+
+        return !fieldErrors.email && !fieldErrors.password && !fieldErrors.confirmPassword;
+    };
+
+    const handleSubmit = async () => {
+        submitError.value = '';
+
+        if (!validateForm()) {
+            return;
+        }
+
+        isSubmitting.value = true;
+
+        try {
+            const registrationResponse = await registerUser({
+                email: form.email.trim(),
+                password: form.password,
+                roleId: DEFAULT_REGISTRATION_ROLE_ID,
+            });
+
+            storeAuthSession(registrationResponse, registrationResponse.createdUser);
+            await router.push('/profile/create');
+        }
+        catch (error) {
+            submitError.value = getAuthRequestErrorMessage(
+                error,
+                'Не удалось зарегистрироваться. Попробуйте еще раз.',
+            );
+        }
+        finally {
+            isSubmitting.value = false;
+        }
+    };
 </script>

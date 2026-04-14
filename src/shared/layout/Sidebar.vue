@@ -12,7 +12,7 @@
 
         <div class="sidebar__buttons-container !pt-[28px] mt-[28px] border-t border-[var(--color-border)]">
             <RouterLink
-                to="/chat/new"
+                to="/chat/new-chat"
                 class="inline-flex !p-[14px] w-full items-center justify-center gap-[10px] rounded-[10px] bg-[var(--color-primary)] px-[16px] py-[14px] !text-white transition-colors duration-300 hover:bg-[var(--color-primary-80)]"
             >
                 <NewChatIcon class="shrink-0" />
@@ -22,16 +22,25 @@
 
         <div class="!mt-[34px] min-h-0 flex-1 overflow-y-auto pr-[4px]">
             <div
-                v-for="group in chatGroups"
+                v-for="(group, index) in chatGroups"
                 :key="group.label"
                 class="sidebar__chat-group"
-                :class="{ '!mt-[20px]': group.label !== chatGroups[0].label }"
+                :class="{ '!mt-[20px]': index > 0 }"
             >
                 <p class="px-[6px] text-[16px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                     {{ group.label }}
                 </p>
 
                 <div class="!mt-[18px] flex flex-col gap-[4px]">
+                    <RouterLink
+                        v-if="showNewChatShortcut"
+                        to="/chat/new-chat"
+                        class="block !p-[10px_10px] rounded-[6px] px-[12px] py-[10px] text-[16px] leading-[18px] text-[var(--color-text-secondary)] transition-colors duration-200 hover:bg-white hover:text-[var(--color-text-primary)]"
+                        :class="{ 'bg-white font-medium text-[var(--color-text-primary)]': route.name === 'chat-new' }"
+                    >
+                        <span class="block truncate">Новый чат</span>
+                    </RouterLink>
+
                     <RouterLink
                         v-for="chat in group.items"
                         :key="chat.id"
@@ -43,6 +52,13 @@
                     >
                         <span class="block truncate">{{ chat.title }}</span>
                     </RouterLink>
+
+                    <p
+                        v-if="!group.items.length"
+                        class="rounded-[8px] bg-white/75 px-[12px] py-[12px] text-[14px] leading-[20px] text-[var(--color-text-muted)]"
+                    >
+                        История чатов появится после первого запроса.
+                    </p>
                 </div>
             </div>
         </div>
@@ -72,61 +88,43 @@
 
 <script lang="ts" setup>
 
-    import { computed } from 'vue';
+    import { computed, onMounted } from 'vue';
     import { useRoute } from 'vue-router';
 
+    import { useChatStore } from '@/entities/chats/models/store';
     import AccountSettingsIcon from '@/shared/icons/chat/AccountSettings.vue';
     import MainMenuIcon from '@/shared/icons/chat/MainMenu.vue';
     import NewChatIcon from '@/shared/icons/chat/NewChat.vue';
 
     const route = useRoute();
+    const chatStore = useChatStore();
 
-    const chatGroups = [
-        {
-            label: 'Сегодня',
-            items: [
-                {
-                    id: 'new',
-                    title: 'Новый чат',
-                    to: '/chat/new',
-                },
-                {
-                    id: 'contract-review',
-                    title: 'Проверка договора на риски',
-                    to: '/chat/contract-review',
-                },
-                {
-                    id: 'nda-analysis',
-                    title: 'Разбор NDA с подрядчиком',
-                    to: '/chat/nda-analysis',
-                },
-            ],
-        },
-        {
-            label: 'Ранее',
-            items: [
-                {
-                    id: 'claim-draft',
-                    title: 'Черновик претензии поставщику',
-                    to: '/chat/claim-draft',
-                },
-                {
-                    id: 'employment-check',
-                    title: 'Проверка трудового договора',
-                    to: '/chat/employment-check',
-                },
-                {
-                    id: 'contract-summary',
-                    title: 'Краткое резюме соглашения',
-                    to: '/chat/contract-summary',
-                },
-            ],
-        },
-    ] as const;
+    onMounted(async () => {
+        if (!chatStore.chats.length && !chatStore.isLoadingChats) {
+            await chatStore.fetchChats();
+        }
+    });
 
     const activeChatId = computed(() => {
         const { chat_id } = route.params;
         return Array.isArray(chat_id) ? chat_id[0] : chat_id;
+    });
+
+    const showNewChatShortcut = computed(() => {
+        return route.name === 'chat-new';
+    });
+
+    const chatGroups = computed(() => {
+        return [
+            {
+                label: 'Чаты',
+                items: chatStore.chats.map((chat) => ({
+                    id: chat.id,
+                    title: chat.title,
+                    to: `/chat/${chat.id}`,
+                })),
+            },
+        ];
     });
 
 </script>
