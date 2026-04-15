@@ -1,10 +1,10 @@
 <template>
     <div
-        class="chat-input flex w-full flex-col gap-[10px] rounded-[26px] border border-[#CDD5DE] bg-[linear-gradient(180deg,#E2E7ED_0%,#D9DEE5_100%)] p-[12px_14px] shadow-[0_20px_48px_rgba(45,51,56,0.12),0_1px_0_rgba(255,255,255,0.9)_inset,0_0_0_1px_rgba(255,255,255,0.45)] transition-[border-color,box-shadow,transform] duration-300 focus-within:border-[var(--color-primary-30)] focus-within:shadow-[0_24px_56px_rgba(45,51,56,0.14),0_1px_0_rgba(255,255,255,0.95)_inset,0_0_0_4px_rgba(118,89,44,0.08)] max-sm:gap-[10px] max-sm:rounded-[22px] max-sm:p-[10px_12px]"
+        class="chat-input relative flex w-full flex-col gap-[10px] rounded-[26px] border border-[#CDD5DE] bg-[linear-gradient(180deg,#E2E7ED_0%,#D9DEE5_100%)] p-[12px_14px] shadow-[0_20px_48px_rgba(45,51,56,0.12),0_1px_0_rgba(255,255,255,0.9)_inset,0_0_0_1px_rgba(255,255,255,0.45)] transition-[border-color,box-shadow,transform] duration-300 focus-within:border-[var(--color-primary-30)] focus-within:shadow-[0_24px_56px_rgba(45,51,56,0.14),0_1px_0_rgba(255,255,255,0.95)_inset,0_0_0_4px_rgba(118,89,44,0.08)] max-sm:gap-[10px] max-sm:rounded-[22px] max-sm:p-[10px_12px]"
     >
         <div
             v-if="selectedFile"
-            class="flex items-center justify-between gap-[12px] rounded-[14px] bg-white/75 px-[14px] py-[10px] text-[13px] font-medium text-[var(--color-text-secondary)]"
+            class="flex items-center !p-[5px_30px] top-[-42px] absolute justify-between gap-[12px] rounded-[14px] bg-white/75 px-[14px] py-[10px] text-[13px] font-medium text-[var(--color-text-secondary)]"
         >
             <span class="truncate">{{ selectedFile.name }}</span>
             <button

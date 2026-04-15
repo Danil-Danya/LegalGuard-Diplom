@@ -15,7 +15,7 @@
         <div class="border-l-[7px] border-accent !pl-[15px]" :class="contentSpacingClass">
             <div
                 v-if="pending"
-                class="assistant-status inline-flex min-h-[48px] items-center gap-[12px] rounded-[16px] border border-[var(--color-primary-20)] bg-white/92 px-[16px] py-[12px] text-[15px] font-semibold text-[var(--color-text-primary)] shadow-[0_16px_34px_rgba(45,51,56,0.08)] backdrop-blur-[8px]"
+                class="assistant-status inline-flex items-center gap-[12px] rounded-[16px] px-[16px] py-[12px] text-[15px] font-semibold text-[var(--color-text-primary)] shadow-[0_16px_34px_rgba(45,51,56,0.08)] backdrop-blur-[8px]"
             >
                 <span>{{ pendingStatusText }}</span>
                 <span class="typing-dots" aria-hidden="true">

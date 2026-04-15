@@ -2,17 +2,20 @@
     <Component :is="layout">
         <RouterView />
     </Component>
+    <AuthRequiredModal />
 </template>
 
 <script setup lang="ts">
     import { computed, onMounted } from 'vue';
     import { useRoute } from 'vue-router';
+    import { isAuthenticatedSession } from '@/entities/users/api/auth';
     import { useUserStore } from '@/entities/users/models/store';
 
     import ChatLayout from '@/layout/ChatLayout.vue';
     import SiteLayout from '@/layout/SiteLayout.vue';
     import LoginLayout from '@/layout/LoginLayout.vue';
     import ContractLayout from '@/layout/ContractLayout.vue';
+    import AuthRequiredModal from '@/shared/ui/AuthRequiredModal.vue';
 
     const route = useRoute();
     const userStore = useUserStore();
@@ -30,7 +33,16 @@
     });
 
     onMounted(async () =>{
-        await userStore.fetchProfile();
+        if (!isAuthenticatedSession()) {
+            return;
+        }
+
+        try {
+            await userStore.fetchProfile();
+        }
+        catch {
+            return;
+        }
     })
 
 </script>

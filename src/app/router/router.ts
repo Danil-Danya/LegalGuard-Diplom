@@ -31,7 +31,9 @@ const router = createRouter({
             name: 'profile-create',
             component: () => import('@/pages/ProfileCreate.vue'),
             meta: {
-                layout: 'login'
+                layout: 'login',
+                requiresAuth: true,
+                authLabel: 'профиль'
             }
         },
         {
@@ -39,7 +41,9 @@ const router = createRouter({
             name: 'chat-new',
             component: () => import('@/pages/Chat.vue'),
             meta: {
-                layout: 'chat'
+                layout: 'chat',
+                requiresAuth: true,
+                authLabel: 'чат консультации'
             }
         },
         {
@@ -97,7 +101,9 @@ const router = createRouter({
             name: 'counterparty-check',
             component: () => import('@/pages/CounterpartyCheck.vue'),
             meta: {
-                layout: 'contracts'
+                layout: 'contracts',
+                requiresAuth: true,
+                authLabel: 'проверку контрагента'
             }
         },
         {
@@ -105,7 +111,9 @@ const router = createRouter({
             name: 'company-detail',
             component: () => import('@/pages/CompanyDetails.vue'),
             meta: {
-                layout: 'contracts'
+                layout: 'contracts',
+                requiresAuth: true,
+                authLabel: 'карточку компании'
             }
         },
         {
@@ -113,7 +121,9 @@ const router = createRouter({
             name: 'chat',
             component: () => import('@/pages/Chat.vue'),
             meta: {
-                layout: 'chat'
+                layout: 'chat',
+                requiresAuth: true,
+                authLabel: 'чат консультации'
             }
         },
         {
@@ -121,7 +131,9 @@ const router = createRouter({
             name: 'chat-analytic',
             component: () => import('@/pages/ChatAnalytic.vue'),
             meta: {
-                layout: 'chat'
+                layout: 'chat',
+                requiresAuth: true,
+                authLabel: 'аналитику чата'
             }
         },
         {
@@ -129,7 +141,9 @@ const router = createRouter({
             name: 'chat-settings',
             component: () => import('@/pages/ChatSettings.vue'),
             meta: {
-                layout: 'chat'
+                layout: 'chat',
+                requiresAuth: true,
+                authLabel: 'настройки аккаунта'
             }
         },
     ]

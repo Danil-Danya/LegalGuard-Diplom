@@ -25,6 +25,18 @@ const isBrowser = () => {
     return typeof window !== 'undefined';
 };
 
+export const getStoredAccessToken = () => {
+    if (!isBrowser()) {
+        return '';
+    }
+
+    return window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) || '';
+};
+
+export const isAuthenticatedSession = () => {
+    return Boolean(getStoredAccessToken());
+};
+
 const getErrorMessageFromPayload = (payload: unknown) => {
     if (!payload || typeof payload !== 'object') {
         return null;

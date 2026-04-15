@@ -78,7 +78,7 @@
                         <div class="!mt-[14px] flex flex-wrap items-center gap-[10px]">
                             <button
                                 type="button"
-                                class="inline-flex min-h-[40px] items-center justify-center rounded-[10px] bg-[var(--color-primary)] px-[16px] text-[14px] font-semibold text-white transition-colors hover:bg-accent"
+                                class="inline-flex !p-[5px_10px] items-center justify-center rounded-[10px] bg-[var(--color-primary)] px-[16px] text-[14px] font-semibold text-white transition-colors hover:bg-accent"
                                 @mousedown.prevent
                                 @click="applyProfileSuggestion"
                             >
@@ -87,7 +87,7 @@
 
                             <button
                                 type="button"
-                                class="inline-flex min-h-[40px] items-center justify-center rounded-[10px] border border-[var(--color-primary-30)] px-[16px] text-[14px] font-medium text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-10)]"
+                                class="inline-flex !p-[5px_10px] items-center justify-center rounded-[10px] border border-[var(--color-primary-30)] px-[16px] text-[14px] font-medium text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-10)]"
                                 @mousedown.prevent
                                 @click="dismissProfileSuggestion"
                             >

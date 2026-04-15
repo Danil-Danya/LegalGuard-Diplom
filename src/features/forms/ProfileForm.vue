@@ -60,7 +60,7 @@
                 <ErrorMessage v-if="submitError" :text="submitError" />
 
                 <div class="login__form-button-container flex justify-center">
-                    <Button @click="handleSubmit"
+                    <Button
                         class="max-xs:w-full disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="isSubmitting"
                         :text="isSubmitting ? 'Сохранение...' : 'Сохранить профиль'"
@@ -79,12 +79,13 @@
 </template>
 
 <script setup lang="ts">
-    import { reactive, ref, watch } from 'vue';
-    import { useRouter } from 'vue-router';
+    import { computed, reactive, ref, watch } from 'vue';
+    import { useRoute, useRouter } from 'vue-router';
 
     import { getAuthRequestErrorMessage } from '@/entities/users/api/auth';
     import { createProfile } from '@/entities/users/api/profile';
     import { ProfilePosition, type ProfileFormState } from '@/entities/users/lib/types';
+    import { resolveAuthRedirectPath } from '@/shared/lib/auth-gate';
     import Button from '@/shared/ui/Button.vue';
     import ErrorMessage from '@/shared/ui/ErrorMessage.vue';
     import FileUpload from '@/shared/ui/FileUpload.vue';
@@ -93,6 +94,7 @@
     import TextArea from '@/shared/ui/TextArea.vue';
 
     const router = useRouter();
+    const route = useRoute();
 
     const isSubmitting = ref(false);
     const submitError = ref('');
@@ -111,6 +113,11 @@
         lastName: '',
         position: '',
         biography: '',
+    });
+
+    const redirectPath = computed(() => {
+        const redirect = Array.isArray(route.query.redirect) ? route.query.redirect[0] : route.query.redirect;
+        return resolveAuthRedirectPath(redirect, '/chat/new-chat');
     });
 
     watch(() => form.avatar, () => {
@@ -197,7 +204,7 @@
                 avatar: form.avatar,
             });
 
-            await router.push('/chat/new-chat');
+            await router.push(redirectPath.value);
         }
         catch (error) {
             submitError.value = getAuthRequestErrorMessage(

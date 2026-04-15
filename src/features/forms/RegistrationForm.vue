@@ -55,15 +55,15 @@
         <div class="login__form-end mt-6 flex justify-center">
             <p class="text-center text-[14px] leading-[20px] text-[var(--color-text-secondary)] max-xs:text-[13px]">
                 У вас уже есть учетная запись?
-                <Link path="/login" text="Войти" />
+                <Link :path="loginPath" text="Войти" />
             </p>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-    import { reactive, ref, watch } from 'vue';
-    import { useRouter } from 'vue-router';
+    import { computed, reactive, ref, watch } from 'vue';
+    import { useRoute, useRouter } from 'vue-router';
 
     import {
         DEFAULT_REGISTRATION_ROLE_ID,
@@ -71,12 +71,14 @@
         registerUser,
         storeAuthSession,
     } from '@/entities/users/api/auth';
+    import { resolveAuthRedirectPath } from '@/shared/lib/auth-gate';
     import Button from '@/shared/ui/Button.vue';
     import ErrorMessage from '@/shared/ui/ErrorMessage.vue';
     import Input from '@/shared/ui/Input.vue';
     import Link from '@/shared/ui/Link.vue';
 
     const router = useRouter();
+    const route = useRoute();
 
     const isSubmitting = ref(false);
     const submitError = ref('');
@@ -91,6 +93,15 @@
         email: '',
         password: '',
         confirmPassword: '',
+    });
+
+    const redirectPath = computed(() => {
+        const redirect = Array.isArray(route.query.redirect) ? route.query.redirect[0] : route.query.redirect;
+        return resolveAuthRedirectPath(redirect, '/chat/new-chat');
+    });
+
+    const loginPath = computed(() => {
+        return `/login?redirect=${encodeURIComponent(redirectPath.value)}`;
     });
 
     watch(() => form.email, () => {
@@ -154,7 +165,12 @@
             });
 
             storeAuthSession(registrationResponse, registrationResponse.createdUser);
-            await router.push('/profile/create');
+            await router.push({
+                path: '/profile/create',
+                query: {
+                    redirect: redirectPath.value,
+                },
+            });
         }
         catch (error) {
             submitError.value = getAuthRequestErrorMessage(

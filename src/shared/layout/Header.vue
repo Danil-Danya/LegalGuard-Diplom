@@ -36,7 +36,8 @@
                         <RouterLink
                             v-if="isAuthenticated"
                             to="/profile/create"
-                            class="flex items-center gap-[10px] rounded-[14px] bg-[var(--color-surface)] px-[10px] py-[6px] transition-colors hover:border-[var(--color-primary-30)">
+                            class="flex items-center gap-[10px] rounded-[14px] bg-[var(--color-surface)] px-[10px] py-[6px] transition-colors hover:bg-[var(--color-primary-10)]"
+                        >
                             <span class="inline-flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-full border border-[var(--color-border)] bg-white text-[14px] font-semibold text-[var(--color-primary)]">
                                 <img
                                     v-if="avatarUrl"
@@ -53,7 +54,7 @@
                         </RouterLink>
 
                         <RouterLink v-else to="/login">
-                            <Button class="text-[15px] font-medium" color="gray" text="Войти" padding="10px_18px" />
+                            <Button class="text-[15px] !p-[5px_18px] block font-medium" color="gray" text="Войти" padding="10px_18px" />
                         </RouterLink>
                     </div>
                 </div>

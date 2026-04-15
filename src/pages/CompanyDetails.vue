@@ -101,7 +101,7 @@
 
                         <article
                             v-if="hasAiResult"
-                            class="rounded-[10px] border border-[var(--color-border)] bg-white !p-[24px] shadow-[0_18px_40px_rgba(45,51,56,0.06)] max-md:!p-[18px]"
+                            class="rounded-[10px] !mt-[30px] border border-[var(--color-border)] bg-white !p-[24px] shadow-[0_18px_40px_rgba(45,51,56,0.06)] max-md:!p-[18px]"
                         >
                             <div class="flex flex-wrap items-center gap-[12px] border-b border-[var(--color-border)] pb-[16px]">
                                 <span class="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] bg-[var(--color-primary-10)] text-[16px] font-semibold text-[var(--color-primary)]">
