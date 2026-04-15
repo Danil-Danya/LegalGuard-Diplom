@@ -73,11 +73,11 @@
                 <section class="grid gap-[18px] !m-[30px_0] lg:grid-cols-1">
                     <article
                         v-if="showOrganizations"
-                        class="rounded-[8px] border border-[var(--color-border)] bg-white !p-[22px] shadow-[0_18px_40px_rgba(45,51,56,0.06)]"
+                        class="overflow-hidden rounded-[8px] border border-[var(--color-border)] bg-white !p-[22px] shadow-[0_18px_40px_rgba(45,51,56,0.06)]"
                     >
                         <div class="flex items-center justify-center gap-[12px] border-b border-[var(--color-border)] pb-[16px]">
-                            <div class="min-w-0">
-                                <h2 class="text-center text-[20px] font-semibold leading-[24px] text-[var(--color-text-primary)]">
+                            <div class="min-w-0 w-full">
+                                <h2 class="!text-[20px] text-center font-semibold leading-[24px] text-[var(--color-text-primary)]">
                                     Организации
                                 </h2>
                                 <p class="!mt-[4px] text-center text-[14px] leading-[20px] text-[var(--color-text-secondary)]">
@@ -100,9 +100,9 @@
                                     :key="organization.id"
                                     class="rounded-[18px] !mb-[30px] border border-[var(--color-border)] bg-[var(--color-surface)] !p-[16px]"
                                 >
-                                    <div class="flex flex-wrap items-start justify-between gap-[10px]">
-                                        <div class="min-w-0">
-                                            <h3 class="truncate text-[18px] font-semibold text-[var(--color-text-primary)]">
+                                    <div class="flex flex-col gap-[10px] sm:flex-row sm:items-start sm:justify-between">
+                                        <div class="min-w-0 flex-1">
+                                            <h3 class="!text-[18px] break-words font-semibold leading-[22px] text-[var(--color-text-primary)] [overflow-wrap:anywhere]">
                                                 {{ organization.name }}
                                             </h3>
                                             <p class="!mt-[6px] text-[13px] leading-[18px] text-[var(--color-text-secondary)]">
@@ -111,7 +111,7 @@
                                         </div>
 
                                         <span
-                                            class="shrink-0 rounded-full !p-[5px_10px] px-[12px] py-[6px] text-[12px] font-semibold"
+                                            class="shrink-0 self-start rounded-full !p-[5px_10px] px-[12px] py-[6px] text-[12px] font-semibold"
                                             :class="getCompanyStatusBadgeClass(organization.companyStatus)"
                                         >
                                             {{ getCompanyStatusLabel(organization.companyStatus) }}
@@ -119,13 +119,13 @@
                                     </div>
 
                                     <dl class="!mt-[14px] grid gap-[10px] text-[14px] leading-[20px] text-[var(--color-text-secondary)] sm:grid-cols-2">
-                                        <div>
+                                        <div class="min-w-0">
                                             <dt class="text-[12px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">Директор</dt>
-                                            <dd class="!mt-[4px] break-words text-[var(--color-text-primary)]">{{ formatText(organization.director) }}</dd>
+                                            <dd class="!mt-[4px] break-words text-[var(--color-text-primary)] [overflow-wrap:anywhere]">{{ formatText(organization.director) }}</dd>
                                         </div>
-                                        <div>
+                                        <div class="min-w-0">
                                             <dt class="text-[12px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">Учредитель</dt>
-                                            <dd class="!mt-[4px] break-words text-[var(--color-text-primary)]">{{ formatText(organization.founder) }}</dd>
+                                            <dd class="!mt-[4px] break-words text-[var(--color-text-primary)] [overflow-wrap:anywhere]">{{ formatText(organization.founder) }}</dd>
                                         </div>
                                     </dl>
 
@@ -138,10 +138,10 @@
                                         </span>
                                     </div>
 
-                                    <div class="!mt-[14px] flex justify-end">
+                                    <div class="!mt-[14px] flex justify-start sm:justify-end">
                                         <RouterLink
                                             :to="{ name: 'company-detail', params: { company_id: organization.id }, query: { name: organization.name } }"
-                                            class="inline-flex !p-[10px_20px] items-center justify-center rounded-[12px] border border-[var(--color-primary-30)] bg-white px-[16px] text-[14px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-10)]"
+                                            class="inline-flex w-full !p-[10px_20px] items-center justify-center rounded-[12px] border border-[var(--color-primary-30)] bg-white px-[16px] text-[14px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-10)] sm:w-auto"
                                         >
                                             Открыть компанию
                                         </RouterLink>
@@ -162,11 +162,11 @@
 
                     <article
                         v-if="showFounders"
-                        class="rounded-[8px] border border-[var(--color-border)] bg-white !p-[22px] shadow-[0_18px_40px_rgba(45,51,56,0.06)]"
+                        class="overflow-hidden rounded-[8px] border border-[var(--color-border)] bg-white !p-[22px] shadow-[0_18px_40px_rgba(45,51,56,0.06)]"
                     >
                         <div class="flex items-center justify-center gap-[12px] border-b border-[var(--color-border)] pb-[16px]">
-                            <div class="min-w-0">
-                                <h2 class="text-center text-[20px] font-semibold leading-[24px] text-[var(--color-text-primary)]">
+                            <div class="min-w-0 w-full">
+                                <h2 class="!text-[20px] text-center font-semibold leading-[24px] text-[var(--color-text-primary)]">
                                     Учредители
                                 </h2>
                                 <p class="!mt-[4px] text-center text-[14px] leading-[20px] text-[var(--color-text-secondary)]">
@@ -180,19 +180,19 @@
                                 <article
                                     v-for="founder in founderCards"
                                     :key="founder.id"
-                                    class="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] !p-[16px]"
+                                    class="rounded-[18px] gap-[30px] border border-[var(--color-border)] bg-[var(--color-surface)] !p-[16px]"
                                 >
-                                    <div class="flex flex-wrap items-start justify-between gap-[10px]">
-                                        <div class="min-w-0">
-                                            <h3 class="truncate text-[18px] font-semibold leading-[22px] text-[var(--color-text-primary)]">
+                                    <div class="flex flex-col gap-[10px] sm:flex-row sm:items-start sm:justify-between">
+                                        <div class="min-w-0 flex-1">
+                                            <h3 class="!text-[18px] break-words font-semibold leading-[22px] text-[var(--color-text-primary)] [overflow-wrap:anywhere]">
                                                 {{ founder.name }}
                                             </h3>
-                                            <p class="!mt-[6px] text-[13px] leading-[18px] text-[var(--color-text-secondary)]">
+                                            <p class="!mt-[6px] break-words text-[13px] leading-[18px] text-[var(--color-text-secondary)] [overflow-wrap:anywhere]">
                                                 {{ founder.role }}
                                             </p>
                                         </div>
 
-                                        <span class="shrink-0 rounded-full bg-white px-[12px] py-[6px] text-[12px] font-semibold text-[var(--color-text-secondary)]">
+                                        <span class="shrink-0 self-start rounded-full bg-white px-[12px] py-[6px] text-[12px] font-semibold text-[var(--color-text-secondary)]">
                                             {{ founder.companies.length }} компаний
                                         </span>
                                     </div>
@@ -201,7 +201,7 @@
                                         <span
                                             v-for="company in founder.companies"
                                             :key="company"
-                                            class="rounded-full border border-[var(--color-border)] bg-white px-[12px] py-[6px] text-[13px] leading-[18px] text-[var(--color-text-primary)]"
+                                            class="max-w-full break-words rounded-full border border-[var(--color-border)] bg-white px-[12px] py-[6px] text-[13px] leading-[18px] text-[var(--color-text-primary)] [overflow-wrap:anywhere]"
                                         >
                                             {{ company }}
                                         </span>

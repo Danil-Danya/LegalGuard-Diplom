@@ -8,7 +8,7 @@ const SKIP_CASE_TRANSFORM_HEADER = 'X-Skip-Case-Transform';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL as string,
-    timeout: 10000
+    timeout: 1000000
 });
 
 api.interceptors.response.use((response) => {
