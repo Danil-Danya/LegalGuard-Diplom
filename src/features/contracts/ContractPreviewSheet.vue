@@ -182,11 +182,11 @@
                                 </section>
 
                                 <section
-                                    v-if="page.showSigningAssets"
+                                    v-if="page.signingParties.length"
                                     class="contract-preview-sheet__signing"
                                 >
                                     <div
-                                        v-if="signaturePreviewUrl"
+                                        v-if="false"
                                         class="contract-preview-sheet__signing-block"
                                     >
                                         <p class="contract-preview-sheet__signing-label">
@@ -194,7 +194,7 @@
                                         </p>
                                         <div class="contract-preview-sheet__signing-frame">
                                             <img
-                                                :src="signaturePreviewUrl"
+                                                :src="undefined"
                                                 alt="Подпись"
                                                 class="contract-preview-sheet__signature-image"
                                             >
@@ -202,7 +202,7 @@
                                     </div>
 
                                     <div
-                                        v-if="stampPreviewUrl"
+                                        v-if="false"
                                         class="contract-preview-sheet__signing-block"
                                     >
                                         <p class="contract-preview-sheet__signing-label">
@@ -210,12 +210,56 @@
                                         </p>
                                         <div class="contract-preview-sheet__signing-frame">
                                             <img
-                                                :src="stampPreviewUrl"
+                                                :src="undefined"
                                                 alt="Печать"
                                                 class="contract-preview-sheet__stamp-image"
                                             >
                                         </div>
                                     </div>
+
+                                    <article
+                                        v-for="party in page.signingParties"
+                                        :key="`${party.key}-signing`"
+                                        class="contract-preview-sheet__signing-party"
+                                    >
+                                        <h4 class="contract-preview-sheet__signing-party-title">
+                                            {{ party.title }}
+                                        </h4>
+
+                                        <div class="contract-preview-sheet__signing-assets">
+                                            <div
+                                                v-if="resolvePartySignaturePreviewUrl(party.key)"
+                                                class="contract-preview-sheet__signing-block"
+                                            >
+                                                <p class="contract-preview-sheet__signing-label">
+                                                    {{ party.signing.signatureTitle || 'Подпись' }}
+                                                </p>
+                                                <div class="contract-preview-sheet__signing-frame">
+                                                    <img
+                                                        :src="resolvePartySignaturePreviewUrl(party.key) || undefined"
+                                                        :alt="party.signing.signatureTitle || 'Подпись'"
+                                                        class="contract-preview-sheet__signature-image"
+                                                    >
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                v-if="resolvePartyStampPreviewUrl(party.key)"
+                                                class="contract-preview-sheet__signing-block"
+                                            >
+                                                <p class="contract-preview-sheet__signing-label">
+                                                    {{ party.signing.stampTitle || 'Печать' }}
+                                                </p>
+                                                <div class="contract-preview-sheet__signing-frame">
+                                                    <img
+                                                        :src="resolvePartyStampPreviewUrl(party.key) || undefined"
+                                                        :alt="party.signing.stampTitle || 'Печать'"
+                                                        class="contract-preview-sheet__stamp-image"
+                                                    >
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </article>
                                 </section>
                             </article>
                         </div>
@@ -231,6 +275,7 @@
 
     import type {
         ContractDocumentPayload,
+        ContractPartyFilesMap,
         ContractPayloadBodyItem,
         ContractPayloadBodySection,
         ContractPayloadParty,
@@ -245,8 +290,13 @@
         includeHeader: boolean;
         sections: PreviewSection[];
         parties: ContractPayloadParty[];
-        showSigningAssets: boolean;
+        signingParties: ContractPayloadParty[];
         remainingHeight: number;
+    }
+
+    interface PartyPreviewUrls {
+        signatureUrl: string;
+        stampUrl: string;
     }
 
     const MM_TO_PX = 96 / 25.4;
@@ -272,23 +322,25 @@
     const PARTY_FIELD_TOP_GAP_MM = 6.9;
     const PARTY_FIELD_LINE_HEIGHT_MM = 5.8;
     const PARTIES_SECTION_BASE_HEIGHT_MM = 31.8;
-    const SIGNING_ASSETS_HEIGHT_MM = 63.5;
+    const SIGNING_SECTION_BASE_HEIGHT_MM = 27;
+    const SIGNING_PARTY_BASE_HEIGHT_MM = 17;
+    const SIGNING_ROW_HEIGHT_MM = 45;
 
     const PAGE_WIDTH_PX = mmToPx(PAGE_WIDTH_MM);
     const PAGE_HEIGHT_PX = mmToPx(PAGE_HEIGHT_MM);
     const PAGE_GAP_PX = mmToPx(PAGE_GAP_MM);
 
-    const props = defineProps<{
+    const props = withDefaults(defineProps<{
         payload: ContractDocumentPayload;
-        signatureFile?: File | null;
-        attachmentFile?: File | null;
-    }>();
+        partyFiles?: ContractPartyFilesMap;
+    }>(), {
+        partyFiles: () => ({}),
+    });
 
-    const signaturePreviewUrl = ref('');
-    const stampPreviewUrl = ref('');
     const previewViewportRef = ref<HTMLElement | null>(null);
     const previewViewportWidth = ref(PAGE_WIDTH_PX);
     const activePageIndex = ref(0);
+    const partyPreviewUrls = ref<Record<string, PartyPreviewUrls>>({});
 
     let resizeObserver: ResizeObserver | null = null;
 
@@ -304,23 +356,33 @@
         previewViewportWidth.value = previewViewportRef.value?.getBoundingClientRect().width ?? PAGE_WIDTH_PX;
     };
 
-    watch(() => props.signatureFile, (file) => {
-        revokeObjectUrl(signaturePreviewUrl.value);
-        signaturePreviewUrl.value = '';
+    const clearPartyPreviewUrls = () => {
+        Object.values(partyPreviewUrls.value).forEach((entry) => {
+            revokeObjectUrl(entry.signatureUrl);
+            revokeObjectUrl(entry.stampUrl);
+        });
 
-        if (file && file.type.startsWith('image/')) {
-            signaturePreviewUrl.value = URL.createObjectURL(file);
-        }
-    }, { immediate: true });
+        partyPreviewUrls.value = {};
+    };
 
-    watch(() => props.attachmentFile, (file) => {
-        revokeObjectUrl(stampPreviewUrl.value);
-        stampPreviewUrl.value = '';
+    watch(() => props.partyFiles, (partyFiles) => {
+        clearPartyPreviewUrls();
 
-        if (file && file.type.startsWith('image/')) {
-            stampPreviewUrl.value = URL.createObjectURL(file);
-        }
-    }, { immediate: true });
+        const nextUrls: Record<string, PartyPreviewUrls> = {};
+
+        Object.entries(partyFiles || {}).forEach(([partyKey, files]) => {
+            nextUrls[partyKey] = {
+                signatureUrl: files.signatureFile && files.signatureFile.type.startsWith('image/')
+                    ? URL.createObjectURL(files.signatureFile)
+                    : '',
+                stampUrl: files.stampFile && files.stampFile.type.startsWith('image/')
+                    ? URL.createObjectURL(files.stampFile)
+                    : '',
+            };
+        });
+
+        partyPreviewUrls.value = nextUrls;
+    }, { immediate: true, deep: true });
 
     onMounted(() => {
         updateViewportWidth();
@@ -337,8 +399,7 @@
     });
 
     onBeforeUnmount(() => {
-        revokeObjectUrl(signaturePreviewUrl.value);
-        revokeObjectUrl(stampPreviewUrl.value);
+        clearPartyPreviewUrls();
         resizeObserver?.disconnect();
     });
 
@@ -368,6 +429,18 @@
         return props.payload.secondParty || 'Лицо 2 не указано';
     });
 
+    const resolvePartySignaturePreviewUrl = (partyKey: string) => {
+        return partyPreviewUrls.value[partyKey]?.signatureUrl || '';
+    };
+
+    const resolvePartyStampPreviewUrl = (partyKey: string) => {
+        return partyPreviewUrls.value[partyKey]?.stampUrl || '';
+    };
+
+    const partyHasSigningAssets = (party: ContractPayloadParty) => {
+        return Boolean(resolvePartySignaturePreviewUrl(party.key) || resolvePartyStampPreviewUrl(party.key));
+    };
+
     const visibleBodySections = computed<PreviewSection[]>(() => {
         return props.payload.body
             .map((section) => {
@@ -390,11 +463,11 @@
                 ...party,
                 fields: party.fields.filter((field) => field.text.trim().length > 0),
             }))
-            .filter((party) => party.fields.length > 0);
+            .filter((party) => party.fields.length > 0 || partyHasSigningAssets(party));
     });
 
-    const hasSigningAssets = computed(() => {
-        return Boolean(signaturePreviewUrl.value || stampPreviewUrl.value);
+    const visibleSigningParties = computed(() => {
+        return visibleParties.value.filter((party) => partyHasSigningAssets(party));
     });
 
     const estimateLines = (text: string, charsPerLine: number) => {
@@ -453,12 +526,28 @@
         return mmToPx(PARTIES_SECTION_BASE_HEIGHT_MM) + Math.max(...parties.map(estimatePartyCardHeight));
     };
 
-    const estimateSigningAssetsHeight = () => {
-        if (!hasSigningAssets.value) {
+    const estimateSigningPartiesHeight = (parties: ContractPayloadParty[]) => {
+        if (!parties.length) {
             return 0;
         }
 
-        return mmToPx(SIGNING_ASSETS_HEIGHT_MM);
+        const partyHeights = parties.map((party) => {
+            let height = mmToPx(SIGNING_PARTY_BASE_HEIGHT_MM);
+
+            if (partyHasSigningAssets(party)) {
+                height += mmToPx(SIGNING_ROW_HEIGHT_MM);
+            }
+
+            return height;
+        });
+
+        const rows: number[] = [];
+
+        for (let index = 0; index < partyHeights.length; index += 2) {
+            rows.push(Math.max(...partyHeights.slice(index, index + 2)));
+        }
+
+        return mmToPx(SIGNING_SECTION_BASE_HEIGHT_MM) + rows.reduce((total, rowHeight) => total + rowHeight, 0);
     };
 
     const createPage = (index: number, includeHeader: boolean): PreviewPage => {
@@ -467,13 +556,13 @@
             includeHeader,
             sections: [],
             parties: [],
-            showSigningAssets: false,
+            signingParties: [],
             remainingHeight: includeHeader ? mmToPx(FIRST_PAGE_CAPACITY_MM) : mmToPx(NEXT_PAGE_CAPACITY_MM),
         };
     };
 
     const pageHasContent = (page: PreviewPage) => {
-        return page.includeHeader || page.sections.length > 0 || page.parties.length > 0 || page.showSigningAssets;
+        return page.includeHeader || page.sections.length > 0 || page.parties.length > 0 || page.signingParties.length > 0;
     };
 
     const previewPages = computed<PreviewPage[]>(() => {
@@ -576,8 +665,8 @@
             page.parties = visibleParties.value;
         });
 
-        appendBlockToPage(estimateSigningAssetsHeight(), (page) => {
-            page.showSigningAssets = true;
+        appendBlockToPage(estimateSigningPartiesHeight(visibleSigningParties.value), (page) => {
+            page.signingParties = visibleSigningParties.value;
         });
 
         if (!pages.length || pageHasContent(currentPage)) {
@@ -836,6 +925,27 @@
         padding-top: 6mm;
     }
 
+    .contract-preview-sheet__signing-party {
+        border: 0.2mm solid rgba(0, 0, 0, 0.1);
+        border-radius: var(--sheet-radius);
+        background: #fff;
+        padding: 4mm;
+    }
+
+    .contract-preview-sheet__signing-party-title {
+        color: #000;
+        font-size: var(--sheet-font-subtitle);
+        font-weight: 700;
+        line-height: 15pt;
+    }
+
+    .contract-preview-sheet__signing-assets {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4mm;
+        margin-top: 3mm;
+    }
+
     .contract-preview-sheet__signing-block {
         display: grid;
         gap: 3.5mm;
@@ -859,6 +969,7 @@
     .contract-preview-sheet__signature-image {
         display: block;
         width: auto;
+        max-width: 100%;
         height: 24mm;
         object-fit: contain;
     }
@@ -866,6 +977,7 @@
     .contract-preview-sheet__stamp-image {
         display: block;
         width: auto;
+        max-width: 100%;
         height: 29mm;
         object-fit: contain;
     }

@@ -48,10 +48,20 @@ export interface ContractPayloadPartyField {
     text: string;
 }
 
+export interface ContractPayloadPartySigning {
+    signatureTitle: string | null;
+    signatureFieldKey: string | null;
+    signatureFileName: string | null;
+    stampTitle: string | null;
+    stampFieldKey: string | null;
+    stampFileName: string | null;
+}
+
 export interface ContractPayloadParty {
     key: string;
     title: string;
     fields: ContractPayloadPartyField[];
+    signing: ContractPayloadPartySigning;
 }
 
 export interface ContractDocumentPayload {
@@ -66,3 +76,10 @@ export interface ContractDocumentPayload {
     signatureFileName: string | null;
     attachmentFileName: string | null;
 }
+
+export interface ContractPartyFiles {
+    signatureFile: File | null;
+    stampFile: File | null;
+}
+
+export type ContractPartyFilesMap = Record<string, ContractPartyFiles>;

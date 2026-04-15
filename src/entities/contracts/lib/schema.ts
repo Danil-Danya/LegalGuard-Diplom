@@ -4,30 +4,12 @@ import type {
     ContractDocumentPayload,
     ContractFieldSchema,
     ContractFieldValue,
+    ContractPartyFilesMap,
     ContractPayloadParty,
     ContractStepSchema,
 } from './types';
 
 type ContractFormValues = Record<string, ContractFieldValue>;
-
-const stepThreeUploadFields: ContractFieldSchema[] = [
-    {
-        key: 'signatureFile',
-        label: 'Загрузить подпись',
-        type: 'file',
-        step: 3,
-        accept: 'image/png,image/jpeg,image/webp',
-        description: 'PNG, JPG или WEBP с подписью для финального документа.',
-    },
-    {
-        key: 'attachmentFile',
-        label: 'Загрузить печать',
-        type: 'file',
-        step: 3,
-        accept: 'image/png,image/jpeg,image/webp',
-        description: 'PNG, JPG или WEBP с печатью для финального документа.',
-    },
-];
 
 const normalizeTextValue = (value?: ContractFieldValue) => {
     return typeof value === 'string' ? value : '';
@@ -60,13 +42,47 @@ const resolveTemplateHeadEntries = (template: TemplateDocument) => {
 };
 
 const isPartySignatureField = (title: string) => {
-    const normalizedTitle = title.trim().toLowerCase();
-    return normalizedTitle.includes('подпись');
+    return title.trim().toLowerCase().includes('подпись');
 };
 
 const isPartyStampField = (title: string) => {
-    const normalizedTitle = title.trim().toLowerCase();
-    return normalizedTitle.includes('печат');
+    return title.trim().toLowerCase().includes('печат');
+};
+
+const getGroundFieldKey = (partyKey: string, fieldIndex: number) => {
+    return `ground_${partyKey}_${fieldIndex}`;
+};
+
+const getGroundAssetKey = (partyKey: string, fieldIndex: number) => {
+    return `ground_${partyKey}_${fieldIndex}_file`;
+};
+
+const resolvePartyDisplayTitle = (partyKey: string, partyIndex?: number) => {
+    if (partyKey === 'person1') {
+        return 'Лицо 1';
+    }
+
+    if (partyKey === 'person2') {
+        return 'Лицо 2';
+    }
+
+    if (typeof partyIndex === 'number') {
+        return `Лицо ${partyIndex + 1}`;
+    }
+
+    return 'Сторона';
+};
+
+const resolveHeadFieldLabel = (fieldKey: string, fieldTitle: string) => {
+    if (fieldKey === 'person1') {
+        return 'Лицо 1';
+    }
+
+    if (fieldKey === 'person2') {
+        return 'Лицо 2';
+    }
+
+    return fieldTitle;
 };
 
 const buildHeadStepFields = (template: TemplateDocument): ContractFieldSchema[] => {
@@ -98,14 +114,20 @@ const buildHeadStepFields = (template: TemplateDocument): ContractFieldSchema[] 
         ];
     }
 
-    return headFields.map((field) => ({
-        key: field.key,
-        label: field.title,
-        type: field.key === 'documentDate' ? 'date' : 'text',
-        step: 1,
-        placeholder: field.key === 'documentDate' ? 'Выберите дату' : `Введите значение для поля "${field.title}"`,
-        defaultValue: field.text,
-    }));
+    return headFields.map((field) => {
+        const label = resolveHeadFieldLabel(field.key, field.title);
+
+        return {
+            key: field.key,
+            label,
+            type: field.key === 'documentDate' ? 'date' : 'text',
+            step: 1,
+            placeholder: field.key === 'documentDate'
+                ? 'Выберите дату'
+                : `Введите значение для поля "${label}"`,
+            defaultValue: field.text,
+        };
+    });
 };
 
 const buildBodyStepFields = (template: TemplateDocument): ContractFieldSchema[] => {
@@ -145,18 +167,40 @@ const buildBodyStepFields = (template: TemplateDocument): ContractFieldSchema[] 
 const buildGroundStepFields = (template: TemplateDocument): ContractFieldSchema[] => {
     const parties = template.templateSchema?.ground?.parties ?? [];
 
-    const generatedFields = parties.flatMap((party) => {
+    return parties.flatMap((party, partyIndex) => {
+        const partyDisplayTitle = resolvePartyDisplayTitle(party.key, partyIndex);
+
         return party.fields.flatMap((field, fieldIndex) => {
-            if (isPartySignatureField(field.title) || isPartyStampField(field.title)) {
-                return [];
+            if (isPartySignatureField(field.title)) {
+                return {
+                    key: getGroundAssetKey(party.key, fieldIndex),
+                    label: `${partyDisplayTitle}: загрузить подпись`,
+                    type: 'file' as const,
+                    step: 3 as const,
+                    accept: 'image/png,image/jpeg,image/webp',
+                    description: 'PNG, JPG или WEBP с подписью для этой стороны документа.',
+                    span: 2 as const,
+                };
+            }
+
+            if (isPartyStampField(field.title)) {
+                return {
+                    key: getGroundAssetKey(party.key, fieldIndex),
+                    label: `${partyDisplayTitle}: загрузить печать`,
+                    type: 'file' as const,
+                    step: 3 as const,
+                    accept: 'image/png,image/jpeg,image/webp',
+                    description: 'PNG, JPG или WEBP с печатью для этой стороны документа.',
+                    span: 2 as const,
+                };
             }
 
             const isRequisitesField = field.title.trim().toLowerCase().includes('реквизит');
             const fieldType: ContractFieldSchema['type'] = isRequisitesField ? 'textarea' : 'text';
 
             return {
-                key: `ground_${party.key}_${fieldIndex}`,
-                label: `${party.title}: ${field.title}`,
+                key: getGroundFieldKey(party.key, fieldIndex),
+                label: `${partyDisplayTitle}: ${field.title}`,
                 type: fieldType,
                 step: 3 as const,
                 placeholder: `Введите значение для поля "${field.title}"`,
@@ -166,8 +210,6 @@ const buildGroundStepFields = (template: TemplateDocument): ContractFieldSchema[
             };
         });
     });
-
-    return [...generatedFields, ...stepThreeUploadFields];
 };
 
 export const buildContractStepSchemas = (template: TemplateDocument): ContractStepSchema[] => {
@@ -191,8 +233,8 @@ export const buildContractStepSchemas = (template: TemplateDocument): ContractSt
         {
             step: 3,
             eyebrow: 'Шаг 03',
-            title: 'Реквизиты, подпись и печать',
-            description: 'Добавьте реквизиты сторон и при необходимости загрузите подпись и печать. Пока файлы не загружены, они не выводятся в документ.',
+            title: 'Реквизиты, подписи и печати сторон',
+            description: 'Добавьте реквизиты сторон и при необходимости загрузите подписи и печати для каждой стороны. Пока файлы не загружены, они не выводятся в документ.',
             fields: buildGroundStepFields(template),
         },
     ];
@@ -222,16 +264,36 @@ const resolvePartyDefaultName = (partyKey: string, values: ContractFormValues) =
     return '';
 };
 
-const buildPayloadParties = (template: TemplateDocument, values: ContractFormValues): ContractPayloadParty[] => {
+const buildPayloadParties = (
+    template: TemplateDocument,
+    values: ContractFormValues,
+): ContractPayloadParty[] => {
     const parties = template.templateSchema?.ground?.parties ?? [];
 
-    return parties.map((party) => {
+    return parties.map((party, partyIndex) => {
+        let signatureTitle: string | null = null;
+        let signatureFieldKey: string | null = null;
+        let signatureFileName: string | null = null;
+        let stampTitle: string | null = null;
+        let stampFieldKey: string | null = null;
+        let stampFileName: string | null = null;
+
         const visibleFields = party.fields.flatMap((field, fieldIndex) => {
-            if (isPartySignatureField(field.title) || isPartyStampField(field.title)) {
+            if (isPartySignatureField(field.title)) {
+                signatureTitle = field.title;
+                signatureFieldKey = getGroundAssetKey(party.key, fieldIndex);
+                signatureFileName = normalizeFileValue(values[signatureFieldKey])?.name ?? null;
                 return [];
             }
 
-            const rawValue = normalizeTextValue(values[`ground_${party.key}_${fieldIndex}`]);
+            if (isPartyStampField(field.title)) {
+                stampTitle = field.title;
+                stampFieldKey = getGroundAssetKey(party.key, fieldIndex);
+                stampFileName = normalizeFileValue(values[stampFieldKey])?.name ?? null;
+                return [];
+            }
+
+            const rawValue = normalizeTextValue(values[getGroundFieldKey(party.key, fieldIndex)]);
             const fallbackValue = field.title.trim().toLowerCase() === 'фио'
                 ? resolvePartyDefaultName(party.key, values)
                 : '';
@@ -244,10 +306,54 @@ const buildPayloadParties = (template: TemplateDocument, values: ContractFormVal
 
         return {
             key: party.key,
-            title: party.title,
+            title: resolvePartyDisplayTitle(party.key, partyIndex),
             fields: visibleFields,
+            signing: {
+                signatureTitle,
+                signatureFieldKey,
+                signatureFileName,
+                stampTitle,
+                stampFieldKey,
+                stampFileName,
+            },
         };
     });
+};
+
+export const buildContractPartyFiles = (
+    template: TemplateDocument,
+    values: ContractFormValues,
+): ContractPartyFilesMap => {
+    const parties = template.templateSchema?.ground?.parties ?? [];
+
+    return parties.reduce<ContractPartyFilesMap>((result, party) => {
+        let signatureFile: File | null = null;
+        let stampFile: File | null = null;
+
+        party.fields.forEach((field, fieldIndex) => {
+            const fileValue = normalizeFileValue(values[getGroundAssetKey(party.key, fieldIndex)]);
+
+            if (!fileValue) {
+                return;
+            }
+
+            if (isPartySignatureField(field.title)) {
+                signatureFile = fileValue;
+                return;
+            }
+
+            if (isPartyStampField(field.title)) {
+                stampFile = fileValue;
+            }
+        });
+
+        result[party.key] = {
+            signatureFile,
+            stampFile,
+        };
+
+        return result;
+    }, {});
 };
 
 export const buildContractPayload = (
@@ -275,8 +381,8 @@ export const buildContractPayload = (
             })),
         })),
         parties: buildPayloadParties(template, values),
-        signatureFileName: normalizeFileValue(values.signatureFile)?.name ?? null,
-        attachmentFileName: normalizeFileValue(values.attachmentFile)?.name ?? null,
+        signatureFileName: null,
+        attachmentFileName: null,
     };
 };
 
@@ -311,9 +417,9 @@ export const buildHintTemplateContext = (
             })),
         })),
         ground: {
-            parties: parties.map((party) => ({
+            parties: parties.map((party, partyIndex) => ({
                 key: party.key,
-                title: party.title,
+                title: resolvePartyDisplayTitle(party.key, partyIndex),
                 fields: party.fields
                     .map((field, fieldIndex) => ({
                         field,
@@ -322,13 +428,25 @@ export const buildHintTemplateContext = (
                     .filter(({ field }) => !isPartySignatureField(field.title) && !isPartyStampField(field.title))
                     .map(({ field, fieldIndex }) => ({
                         title: field.title,
-                        text: normalizeTextValue(values[`ground_${party.key}_${fieldIndex}`]) || field.text,
+                        text: normalizeTextValue(values[getGroundFieldKey(party.key, fieldIndex)]) || field.text,
                     })),
             })),
         },
         assets: {
-            signatureFileName: normalizeFileValue(values.signatureFile)?.name ?? null,
-            attachmentFileName: normalizeFileValue(values.attachmentFile)?.name ?? null,
+            parties: parties.map((party) => {
+                const signatureFieldIndex = party.fields.findIndex((field) => isPartySignatureField(field.title));
+                const stampFieldIndex = party.fields.findIndex((field) => isPartyStampField(field.title));
+
+                return {
+                    key: party.key,
+                    signatureFileName: signatureFieldIndex >= 0
+                        ? normalizeFileValue(values[getGroundAssetKey(party.key, signatureFieldIndex)])?.name ?? null
+                        : null,
+                    stampFileName: stampFieldIndex >= 0
+                        ? normalizeFileValue(values[getGroundAssetKey(party.key, stampFieldIndex)])?.name ?? null
+                        : null,
+                };
+            }),
         },
     };
 };

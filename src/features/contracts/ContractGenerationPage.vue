@@ -78,9 +78,8 @@
 
                         <div class="hidden md:block">
                             <ContractPreviewSheet
-                                :attachment-file="attachmentFile"
+                                :party-files="partyFiles"
                                 :payload="previewPayload"
-                                :signature-file="signatureFile"
                             />
                         </div>
                     </div>
@@ -178,9 +177,8 @@
 
                     <div class="flex-1 overflow-y-auto bg-[var(--color-surface)] p-[12px] !mt-[10px]">
                         <ContractPreviewSheet
-                            :attachment-file="attachmentFile"
+                            :party-files="partyFiles"
                             :payload="previewPayload"
-                            :signature-file="signatureFile"
                         />
                     </div>
                 </div>
@@ -193,7 +191,7 @@
     import { computed, onBeforeUnmount, ref, watch } from 'vue';
     import { useRoute } from 'vue-router';
 
-    import { buildContractPayload, buildContractStepSchemas, buildHintTemplateContext } from '@/entities/contracts/lib/schema';
+    import { buildContractPartyFiles, buildContractPayload, buildContractStepSchemas, buildHintTemplateContext } from '@/entities/contracts/lib/schema';
     import type { ContractDocumentPayload, ContractFieldValue, ContractStep, ContractStepSchema } from '@/entities/contracts/lib/types';
     import { useContractStore } from '@/entities/contracts/models/store';
     import { useTemplatesStore } from '@/entities/templates/models/store';
@@ -330,14 +328,12 @@
         return buildHintTemplateContext(resolvedTemplate.value, contractStore.values);
     });
 
-    const signatureFile = computed(() => {
-        const value = contractStore.values.signatureFile;
-        return value instanceof File ? value : null;
-    });
+    const partyFiles = computed(() => {
+        if (!resolvedTemplate.value) {
+            return {};
+        }
 
-    const attachmentFile = computed(() => {
-        const value = contractStore.values.attachmentFile;
-        return value instanceof File ? value : null;
+        return buildContractPartyFiles(resolvedTemplate.value, contractStore.values);
     });
 
     const previousPath = computed(() => {
@@ -369,7 +365,7 @@
             return `/contracts/${resolvedTemplate.value.slug}/contract_id/step-three`;
         }
 
-        return `/template/${resolvedTemplate.value.slug}`;
+        return `/contracts/${resolvedTemplate.value.slug}/contract_id/ready`;
     });
 
     const nextLabel = computed(() => {

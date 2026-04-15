@@ -85,15 +85,15 @@
 
     const links = ref([
         {
-            path: '/',
+            path: '/chat/new-chat',
             text: 'Чат консультации',
         },
         {
-            path: '/',
+            path: '/contracts/templates',
             text: 'Шаблоны договоров',
         },
         {
-            path: '/',
+            path: '/company/counterparty-check',
             text: 'Проверка компании',
         },
     ]);

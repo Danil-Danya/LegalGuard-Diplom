@@ -8,7 +8,7 @@
             :class="item.active ? 'bg-[var(--color-primary-10)] text-[var(--color-primary)]' : 'hover:bg-[var(--color-hover-10)] hover:text-[var(--color-text-primary)]'"
         >
             <component :is="item.icon" class="shrink-0" />
-            <span class="text-[10px] leading-[12px] font-medium">{{ item.label }}</span>
+            <span class="text-[10px] font-medium leading-[12px]">{{ item.label }}</span>
         </RouterLink>
     </nav>
 </template>
@@ -28,18 +28,22 @@
         return Array.isArray(chat_id) ? chat_id[0] : chat_id;
     });
 
+    const isChatPage = computed(() => {
+        return route.path === '/chat/new-chat' || /^\/chat\/[^/]+$/.test(route.path);
+    });
+
     const items = computed(() => [
         {
             label: 'Чат консультации',
-            to: '/chat/analytic',
+            to: '/chat/new-chat',
             icon: AnalyticsTabIcon,
-            active: activeChatId.value === 'analytic',
+            active: activeChatId.value === 'analytic' || isChatPage.value,
         },
         {
             label: 'Проверка компании',
-            to: '/chat/counterparty-check',
+            to: '/company/counterparty-check',
             icon: CounterpartyTabIcon,
-            active: activeChatId.value === 'counterparty-check',
+            active: route.path.startsWith('/company'),
         },
         {
             label: 'Договора',

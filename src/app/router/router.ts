@@ -84,6 +84,30 @@ const router = createRouter({
             }
         },
         {
+            path: '/contracts/:template_name/contract_id/ready',
+            name: 'contract-template-ready',
+            component: () => import('@/pages/ContractTemplateReady.vue'),
+            meta: {
+                layout: 'contracts'
+            }
+        },
+        {
+            path: '/company/counterparty-check',
+            name: 'counterparty-check',
+            component: () => import('@/pages/CounterpartyCheck.vue'),
+            meta: {
+                layout: 'contracts'
+            }
+        },
+        {
+            path: '/company/:company_id',
+            name: 'company-detail',
+            component: () => import('@/pages/CompanyDetails.vue'),
+            meta: {
+                layout: 'contracts'
+            }
+        },
+        {
             path: '/chat/:chat_id',
             name: 'chat',
             component: () => import('@/pages/Chat.vue'),
