@@ -267,6 +267,18 @@
                 </div>
             </div>
         </div>
+
+        <div
+            aria-hidden="true"
+            class="contract-preview-sheet__measure-root"
+        >
+            <article
+                class="contract-preview-sheet contract-preview-sheet--measure bg-white text-black"
+                :style="measurementSheetStyle"
+            >
+                <div ref="measurementHostRef" />
+            </article>
+        </div>
     </div>
 </template>
 
@@ -275,6 +287,7 @@
 
     import type {
         ContractDocumentPayload,
+        ContractPartyAssetSourcesMap,
         ContractPartyFilesMap,
         ContractPayloadBodyItem,
         ContractPayloadBodySection,
@@ -300,8 +313,10 @@
     }
 
     const MM_TO_PX = 96 / 25.4;
+    const PT_TO_MM = 25.4 / 72;
     const mmToPx = (value: number) => value * MM_TO_PX;
     const toMm = (value: number) => `${value}mm`;
+    const ptToPx = (value: number) => mmToPx(value * PT_TO_MM);
 
     const PAGE_WIDTH_MM = 210;
     const PAGE_HEIGHT_MM = 297;
@@ -309,38 +324,29 @@
     const PAGE_PADDING_SIDE_MM = 12;
     const PAGE_PADDING_BOTTOM_MM = 14;
     const PAGE_GAP_MM = 5;
-    const FIRST_PAGE_CAPACITY_MM = 201;
-    const NEXT_PAGE_CAPACITY_MM = 241;
-    const SECTION_BASE_HEIGHT_MM = 18.5;
-    const SECTION_HEADER_HEIGHT_MM = 10;
-    const BODY_TEXT_LINE_HEIGHT_MM = 6.9;
-    const BODY_TEXT_BLOCK_GAP_MM = 3.2;
-    const SECTION_ITEM_TOP_GAP_MM = 4.8;
-    const ITEM_TITLE_LINE_HEIGHT_MM = 6.35;
-    const ITEM_TEXT_LINE_HEIGHT_MM = 6.6;
-    const PARTY_CARD_BASE_HEIGHT_MM = 20.1;
-    const PARTY_FIELD_TOP_GAP_MM = 6.9;
-    const PARTY_FIELD_LINE_HEIGHT_MM = 5.8;
-    const PARTIES_SECTION_BASE_HEIGHT_MM = 31.8;
-    const SIGNING_SECTION_BASE_HEIGHT_MM = 27;
-    const SIGNING_PARTY_BASE_HEIGHT_MM = 17;
-    const SIGNING_ROW_HEIGHT_MM = 45;
 
     const PAGE_WIDTH_PX = mmToPx(PAGE_WIDTH_MM);
     const PAGE_HEIGHT_PX = mmToPx(PAGE_HEIGHT_MM);
     const PAGE_GAP_PX = mmToPx(PAGE_GAP_MM);
+    const PAGE_CONTENT_HEIGHT_PX = mmToPx(PAGE_HEIGHT_MM - PAGE_PADDING_TOP_MM - PAGE_PADDING_BOTTOM_MM);
+    const SECTIONS_PADDING_TOP_PX = mmToPx(5);
+    const SECTIONS_GAP_PX = mmToPx(5);
 
     const props = withDefaults(defineProps<{
         payload: ContractDocumentPayload;
         partyFiles?: ContractPartyFilesMap;
+        partyAssetSources?: ContractPartyAssetSourcesMap;
     }>(), {
         partyFiles: () => ({}),
+        partyAssetSources: () => ({}),
     });
 
     const previewViewportRef = ref<HTMLElement | null>(null);
+    const measurementHostRef = ref<HTMLElement | null>(null);
     const previewViewportWidth = ref(PAGE_WIDTH_PX);
     const activePageIndex = ref(0);
-    const partyPreviewUrls = ref<Record<string, PartyPreviewUrls>>({});
+    const localPartyPreviewUrls = ref<Record<string, PartyPreviewUrls>>({});
+    const measurementVersion = ref(0);
 
     let resizeObserver: ResizeObserver | null = null;
 
@@ -356,13 +362,17 @@
         previewViewportWidth.value = previewViewportRef.value?.getBoundingClientRect().width ?? PAGE_WIDTH_PX;
     };
 
+    const refreshMeasurements = () => {
+        measurementVersion.value += 1;
+    };
+
     const clearPartyPreviewUrls = () => {
-        Object.values(partyPreviewUrls.value).forEach((entry) => {
+        Object.values(localPartyPreviewUrls.value).forEach((entry) => {
             revokeObjectUrl(entry.signatureUrl);
             revokeObjectUrl(entry.stampUrl);
         });
 
-        partyPreviewUrls.value = {};
+        localPartyPreviewUrls.value = {};
     };
 
     watch(() => props.partyFiles, (partyFiles) => {
@@ -381,11 +391,12 @@
             };
         });
 
-        partyPreviewUrls.value = nextUrls;
+        localPartyPreviewUrls.value = nextUrls;
     }, { immediate: true, deep: true });
 
     onMounted(() => {
         updateViewportWidth();
+        refreshMeasurements();
 
         if (typeof ResizeObserver !== 'undefined') {
             resizeObserver = new ResizeObserver(() => {
@@ -395,6 +406,12 @@
             if (previewViewportRef.value) {
                 resizeObserver.observe(previewViewportRef.value);
             }
+        }
+
+        if (typeof document !== 'undefined' && 'fonts' in document) {
+            void document.fonts.ready.then(() => {
+                refreshMeasurements();
+            });
         }
     });
 
@@ -430,11 +447,11 @@
     });
 
     const resolvePartySignaturePreviewUrl = (partyKey: string) => {
-        return partyPreviewUrls.value[partyKey]?.signatureUrl || '';
+        return props.partyAssetSources?.[partyKey]?.signatureSrc || localPartyPreviewUrls.value[partyKey]?.signatureUrl || '';
     };
 
     const resolvePartyStampPreviewUrl = (partyKey: string) => {
-        return partyPreviewUrls.value[partyKey]?.stampUrl || '';
+        return props.partyAssetSources?.[partyKey]?.stampSrc || localPartyPreviewUrls.value[partyKey]?.stampUrl || '';
     };
 
     const partyHasSigningAssets = (party: ContractPayloadParty) => {
@@ -470,94 +487,222 @@
         return visibleParties.value.filter((party) => partyHasSigningAssets(party));
     });
 
-    const estimateLines = (text: string, charsPerLine: number) => {
-        return Math.max(1, Math.ceil(text.trim().length / charsPerLine));
+    const createElement = <K extends keyof HTMLElementTagNameMap>(
+        tag: K,
+        className?: string,
+        text?: string,
+    ) => {
+        const element = document.createElement(tag);
+
+        if (className) {
+            element.className = className;
+        }
+
+        if (typeof text === 'string') {
+            element.textContent = text;
+        }
+
+        return element;
     };
 
-    const estimateSectionHeaderHeight = () => {
-        return mmToPx(SECTION_HEADER_HEIGHT_MM);
-    };
+    const measureBlockHeight = (builder: () => HTMLElement) => {
+        const host = measurementHostRef.value;
 
-    const estimateSectionTextHeight = (text: string) => {
-        if (!text.trim()) {
+        if (!host || typeof document === 'undefined') {
             return 0;
         }
 
-        return mmToPx(estimateLines(text, 88) * BODY_TEXT_LINE_HEIGHT_MM + BODY_TEXT_BLOCK_GAP_MM);
-    };
+        host.replaceChildren();
 
-    const estimateSectionItemHeight = (item: ContractPayloadBodyItem) => {
-        let height = mmToPx(SECTION_ITEM_TOP_GAP_MM);
-        height += mmToPx(estimateLines(item.title, 72) * ITEM_TITLE_LINE_HEIGHT_MM);
-        height += mmToPx(estimateLines(item.text, 88) * ITEM_TEXT_LINE_HEIGHT_MM);
+        const block = builder();
+        host.appendChild(block);
+
+        const height = block.getBoundingClientRect().height;
+        host.replaceChildren();
+
         return height;
     };
 
-    const estimateSectionHeight = (section: PreviewSection) => {
-        let height = mmToPx(SECTION_BASE_HEIGHT_MM);
+    const createSectionItemNode = (item: ContractPayloadBodyItem) => {
+        const itemNode = createElement('article', 'contract-preview-sheet__item');
+        const itemNumberNode = createElement('p', 'contract-preview-sheet__item-number', item.number);
+        const itemBodyNode = createElement('div');
+        const itemTitleNode = createElement('p', 'contract-preview-sheet__item-title', item.title);
+        const itemTextNode = createElement('p', 'contract-preview-sheet__item-text', item.text);
 
-        if (section.text) {
-            height += estimateSectionTextHeight(section.text);
+        itemBodyNode.append(itemTitleNode, itemTextNode);
+        itemNode.append(itemNumberNode, itemBodyNode);
+
+        return itemNode;
+    };
+
+    const createSectionChunkNode = (
+        section: PreviewSection,
+        text: string,
+        items: ContractPayloadBodyItem[],
+    ) => {
+        const sectionNode = createElement('article', 'contract-preview-sheet__section');
+        const sectionHeaderNode = createElement('div', 'contract-preview-sheet__section-header');
+        const sectionTitleNode = createElement('h3', 'contract-preview-sheet__section-title', `${section.number}. ${section.title}`);
+
+        sectionHeaderNode.append(sectionTitleNode);
+        sectionNode.append(sectionHeaderNode);
+
+        if (text.trim()) {
+            sectionNode.append(createElement('p', 'contract-preview-sheet__section-text', text));
         }
 
-        section.items.forEach((item) => {
-            height += estimateSectionItemHeight(item);
+        if (items.length) {
+            const itemsNode = createElement('div', 'contract-preview-sheet__items');
+
+            items.forEach((item) => {
+                itemsNode.append(createSectionItemNode(item));
+            });
+
+            sectionNode.append(itemsNode);
+        }
+
+        return sectionNode;
+    };
+
+    const createPartyCardNode = (party: ContractPayloadParty) => {
+        const partyNode = createElement('article', 'contract-preview-sheet__party-card');
+        const partyTitleNode = createElement('h4', 'contract-preview-sheet__party-title', party.title);
+        const partyFieldsNode = createElement('div', 'contract-preview-sheet__party-fields');
+
+        party.fields.forEach((field) => {
+            const fieldNode = createElement('div', 'contract-preview-sheet__party-field');
+            fieldNode.append(
+                createElement('p', 'contract-preview-sheet__party-field-label', field.title),
+                createElement('p', 'contract-preview-sheet__party-field-text', field.text),
+            );
+            partyFieldsNode.append(fieldNode);
         });
 
-        return height;
+        partyNode.append(partyTitleNode, partyFieldsNode);
+
+        return partyNode;
     };
 
-    const estimatePartyCardHeight = (party: ContractPayloadParty) => {
-        return mmToPx(PARTY_CARD_BASE_HEIGHT_MM) + party.fields.reduce((total, field) => {
-            return total + mmToPx(PARTY_FIELD_TOP_GAP_MM + estimateLines(field.text, 46) * PARTY_FIELD_LINE_HEIGHT_MM);
-        }, 0);
+    const createSigningPartyNode = (party: ContractPayloadParty) => {
+        const signingPartyNode = createElement('article', 'contract-preview-sheet__signing-party');
+        const signingPartyTitleNode = createElement('h4', 'contract-preview-sheet__signing-party-title', party.title);
+        const signingAssetsNode = createElement('div', 'contract-preview-sheet__signing-assets');
+
+        if (resolvePartySignaturePreviewUrl(party.key)) {
+            const signatureNode = createElement('div', 'contract-preview-sheet__signing-block');
+            const signatureFrameNode = createElement('div', 'contract-preview-sheet__signing-frame');
+            const signatureImageNode = createElement('img', 'contract-preview-sheet__signature-image');
+            signatureImageNode.alt = party.signing.signatureTitle || 'Подпись';
+            signatureFrameNode.append(signatureImageNode);
+            signatureNode.append(
+                createElement('p', 'contract-preview-sheet__signing-label', party.signing.signatureTitle || 'Подпись'),
+                signatureFrameNode,
+            );
+            signingAssetsNode.append(signatureNode);
+        }
+
+        if (resolvePartyStampPreviewUrl(party.key)) {
+            const stampNode = createElement('div', 'contract-preview-sheet__signing-block');
+            const stampFrameNode = createElement('div', 'contract-preview-sheet__signing-frame');
+            const stampImageNode = createElement('img', 'contract-preview-sheet__stamp-image');
+            stampImageNode.alt = party.signing.stampTitle || 'Печать';
+            stampFrameNode.append(stampImageNode);
+            stampNode.append(
+                createElement('p', 'contract-preview-sheet__signing-label', party.signing.stampTitle || 'Печать'),
+                stampFrameNode,
+            );
+            signingAssetsNode.append(stampNode);
+        }
+
+        signingPartyNode.append(signingPartyTitleNode, signingAssetsNode);
+
+        return signingPartyNode;
     };
 
-    const estimatePartiesHeight = (parties: ContractPayloadParty[]) => {
-        if (!parties.length) {
-            return 0;
-        }
+    const measureHeaderIntroHeight = () => {
+        return measureBlockHeight(() => {
+            const wrapper = createElement('div');
+            const headerNode = createElement('div', 'contract-preview-sheet__header');
+            const headerMetaText = [documentPlace.value, formattedDate.value]
+                .filter(Boolean)
+                .join(', ');
 
-        if (parties.length === 1) {
-            const [firstPartyEntry] = parties;
-            return firstPartyEntry ? mmToPx(PARTIES_SECTION_BASE_HEIGHT_MM) + estimatePartyCardHeight(firstPartyEntry) : 0;
-        }
-
-        return mmToPx(PARTIES_SECTION_BASE_HEIGHT_MM) + Math.max(...parties.map(estimatePartyCardHeight));
-    };
-
-    const estimateSigningPartiesHeight = (parties: ContractPayloadParty[]) => {
-        if (!parties.length) {
-            return 0;
-        }
-
-        const partyHeights = parties.map((party) => {
-            let height = mmToPx(SIGNING_PARTY_BASE_HEIGHT_MM);
-
-            if (partyHasSigningAssets(party)) {
-                height += mmToPx(SIGNING_ROW_HEIGHT_MM);
+            if (headerMetaText) {
+                headerNode.append(createElement('p', 'contract-preview-sheet__meta', headerMetaText));
             }
 
-            return height;
+            headerNode.append(createElement('h2', 'contract-preview-sheet__title', props.payload.title));
+
+            const introNode = createElement('section', 'contract-preview-sheet__intro');
+            introNode.append(
+                createElement(
+                    'p',
+                    'contract-preview-sheet__paragraph',
+                    `${firstParty.value} и ${secondParty.value} заключили настоящий документ на условиях, указанных ниже.`,
+                ),
+            );
+
+            wrapper.append(headerNode, introNode);
+
+            return wrapper;
         });
+    };
 
-        const rows: number[] = [];
+    const measureSectionChunkHeight = (
+        section: PreviewSection,
+        text: string,
+        items: ContractPayloadBodyItem[],
+    ) => {
+        return measureBlockHeight(() => createSectionChunkNode(section, text, items));
+    };
 
-        for (let index = 0; index < partyHeights.length; index += 2) {
-            rows.push(Math.max(...partyHeights.slice(index, index + 2)));
+    const measurePartiesHeight = (parties: ContractPayloadParty[]) => {
+        if (!parties.length) {
+            return 0;
         }
 
-        return mmToPx(SIGNING_SECTION_BASE_HEIGHT_MM) + rows.reduce((total, rowHeight) => total + rowHeight, 0);
+        return measureBlockHeight(() => {
+            const sectionNode = createElement('section', 'contract-preview-sheet__parties');
+            const titleNode = createElement('h3', 'contract-preview-sheet__parties-title', 'Стороны документа');
+            const gridNode = createElement('div', 'contract-preview-sheet__party-grid');
+
+            parties.forEach((party) => {
+                gridNode.append(createPartyCardNode(party));
+            });
+
+            sectionNode.append(titleNode, gridNode);
+
+            return sectionNode;
+        });
+    };
+
+    const measureSigningPartiesHeight = (parties: ContractPayloadParty[]) => {
+        if (!parties.length) {
+            return 0;
+        }
+
+        return measureBlockHeight(() => {
+            const sectionNode = createElement('section', 'contract-preview-sheet__signing');
+
+            parties.forEach((party) => {
+                sectionNode.append(createSigningPartyNode(party));
+            });
+
+            return sectionNode;
+        });
     };
 
     const createPage = (index: number, includeHeader: boolean): PreviewPage => {
+        const headerIntroHeight = includeHeader ? measureHeaderIntroHeight() : 0;
+
         return {
             key: `page-${index}`,
             includeHeader,
             sections: [],
             parties: [],
             signingParties: [],
-            remainingHeight: includeHeader ? mmToPx(FIRST_PAGE_CAPACITY_MM) : mmToPx(NEXT_PAGE_CAPACITY_MM),
+            remainingHeight: Math.max(0, PAGE_CONTENT_HEIGHT_PX - headerIntroHeight),
         };
     };
 
@@ -566,6 +711,8 @@
     };
 
     const previewPages = computed<PreviewPage[]>(() => {
+        measurementVersion.value;
+
         const pages: PreviewPage[] = [];
         let pageIndex = 1;
         let currentPage = createPage(pageIndex, true);
@@ -582,23 +729,22 @@
             let isFirstChunk = true;
 
             while (isFirstChunk || sectionItemsQueue.length > 0) {
-                let chunkHeight = estimateSectionHeaderHeight();
                 const chunk: PreviewSection = {
                     ...section,
                     text: '',
                     items: [],
                 };
+                let chunkHeight = measureSectionChunkHeight(section, chunk.text, chunk.items);
 
-                if (pageHasContent(currentPage) && chunkHeight > currentPage.remainingHeight) {
-                    pushCurrentPage();
-                }
+                if (isFirstChunk && sectionText.trim()) {
+                    const textHeight = measureSectionChunkHeight(section, sectionText, []);
+                    const sectionPlacementOffset = currentPage.sections.length ? SECTIONS_GAP_PX : SECTIONS_PADDING_TOP_PX;
+                    const fitsTextChunk = textHeight + sectionPlacementOffset <= currentPage.remainingHeight;
+                    const shouldForceText = !pageHasContent(currentPage);
 
-                if (isFirstChunk && sectionText) {
-                    const textHeight = estimateSectionTextHeight(sectionText);
-
-                    if (chunkHeight + textHeight <= currentPage.remainingHeight || !pageHasContent(currentPage)) {
+                    if (fitsTextChunk || shouldForceText) {
                         chunk.text = sectionText;
-                        chunkHeight += textHeight;
+                        chunkHeight = textHeight;
                         sectionText = '';
                     }
                 }
@@ -610,11 +756,15 @@
                         break;
                     }
 
-                    const itemHeight = estimateSectionItemHeight(nextItem);
+                    const nextChunkItems = [...chunk.items, nextItem];
+                    const nextChunkHeight = measureSectionChunkHeight(section, chunk.text, nextChunkItems);
+                    const sectionPlacementOffset = currentPage.sections.length ? SECTIONS_GAP_PX : SECTIONS_PADDING_TOP_PX;
+                    const fitsNextChunk = nextChunkHeight + sectionPlacementOffset <= currentPage.remainingHeight;
+                    const shouldForceItem = !pageHasContent(currentPage) && chunk.items.length === 0 && !chunk.text;
 
-                    if (chunkHeight + itemHeight <= currentPage.remainingHeight) {
-                        chunk.items.push(nextItem);
-                        chunkHeight += itemHeight;
+                    if (fitsNextChunk || shouldForceItem) {
+                        chunk.items = nextChunkItems;
+                        chunkHeight = nextChunkHeight;
                         sectionItemsQueue.shift();
                         continue;
                     }
@@ -634,12 +784,18 @@
 
                     if (forcedItem) {
                         chunk.items.push(forcedItem);
-                        chunkHeight += estimateSectionItemHeight(forcedItem);
+                        chunkHeight = measureSectionChunkHeight(section, chunk.text, chunk.items);
                     }
                 }
 
+                const sectionPlacementOffset = currentPage.sections.length ? SECTIONS_GAP_PX : SECTIONS_PADDING_TOP_PX;
+
+                if (chunkHeight + sectionPlacementOffset > currentPage.remainingHeight && pageHasContent(currentPage)) {
+                    pushCurrentPage();
+                }
+
                 currentPage.sections.push(chunk);
-                currentPage.remainingHeight -= chunkHeight;
+                currentPage.remainingHeight -= sectionPlacementOffset + chunkHeight;
                 isFirstChunk = false;
 
                 if (sectionItemsQueue.length > 0) {
@@ -661,11 +817,11 @@
             currentPage.remainingHeight -= height;
         };
 
-        appendBlockToPage(estimatePartiesHeight(visibleParties.value), (page) => {
+        appendBlockToPage(measurePartiesHeight(visibleParties.value), (page) => {
             page.parties = visibleParties.value;
         });
 
-        appendBlockToPage(estimateSigningPartiesHeight(visibleSigningParties.value), (page) => {
+        appendBlockToPage(measureSigningPartiesHeight(visibleSigningParties.value), (page) => {
             page.signingParties = visibleSigningParties.value;
         });
 
@@ -724,6 +880,14 @@
         };
     });
 
+    const measurementSheetStyle = computed(() => {
+        return {
+            width: toMm(PAGE_WIDTH_MM),
+            minHeight: 'auto',
+            padding: `${toMm(PAGE_PADDING_TOP_MM)} ${toMm(PAGE_PADDING_SIDE_MM)} ${toMm(PAGE_PADDING_BOTTOM_MM)}`,
+        };
+    });
+
     const trackStyle = computed(() => {
         return {
             width: `${previewPages.value.length * (scaledPageWidth.value + PAGE_GAP_PX)}px`,
@@ -765,6 +929,20 @@
         font-family: inherit;
     }
 
+    .contract-preview-sheet__measure-root {
+        position: fixed;
+        top: 0;
+        left: -99999px;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    .contract-preview-sheet--measure {
+        position: static;
+        box-shadow: none;
+        transform: none !important;
+    }
+
     .contract-preview-sheet__header {
         border-bottom: 0.2mm solid rgba(0, 0, 0, 0.1);
         padding-bottom: 4mm;
@@ -774,7 +952,7 @@
     .contract-preview-sheet__meta {
         color: rgba(0, 0, 0, 0.7);
         font-size: var(--sheet-font-small);
-        line-height: var(--sheet-line-tight);
+        line-height: 13pt;
     }
 
     .contract-preview-sheet__title {
@@ -785,6 +963,7 @@
         line-height: 24pt;
         letter-spacing: -0.03em;
         text-transform: uppercase;
+        margin-bottom: 0;
     }
 
     .contract-preview-sheet__intro {
@@ -792,6 +971,7 @@
     }
 
     .contract-preview-sheet__paragraph {
+        margin: 0;
         color: rgba(0, 0, 0, 0.82);
         font-size: var(--sheet-font-body);
         line-height: var(--sheet-line-body);
@@ -814,6 +994,7 @@
     }
 
     .contract-preview-sheet__section-title {
+        margin: 0;
         color: #000;
         font-size: var(--sheet-font-section);
         font-weight: 700;
@@ -821,6 +1002,7 @@
     }
 
     .contract-preview-sheet__section-text {
+        margin: 0;
         color: rgba(0, 0, 0, 0.82);
         font-size: var(--sheet-font-body);
         line-height: 15.5pt;
@@ -838,6 +1020,7 @@
     }
 
     .contract-preview-sheet__item-number {
+        margin: 0;
         color: #000;
         font-size: 10pt;
         font-weight: 700;
@@ -845,6 +1028,7 @@
     }
 
     .contract-preview-sheet__item-title {
+        margin: 0;
         color: #000;
         font-size: var(--sheet-font-body);
         font-weight: 600;
@@ -853,6 +1037,7 @@
 
     .contract-preview-sheet__item-text {
         margin-top: 1mm;
+        margin-bottom: 0;
         color: rgba(0, 0, 0, 0.76);
         font-size: var(--sheet-font-body);
         line-height: var(--sheet-line-tight);
@@ -885,6 +1070,7 @@
     }
 
     .contract-preview-sheet__party-title {
+        margin: 0;
         color: #000;
         font-size: var(--sheet-font-subtitle);
         font-weight: 700;
@@ -903,6 +1089,7 @@
     }
 
     .contract-preview-sheet__party-field-label {
+        margin: 0;
         color: rgba(0, 0, 0, 0.45);
         font-size: var(--sheet-font-label);
         line-height: 10pt;
@@ -911,6 +1098,7 @@
     }
 
     .contract-preview-sheet__party-field-text {
+        margin: 0;
         color: rgba(0, 0, 0, 0.82);
         font-size: 10pt;
         line-height: 14pt;
@@ -933,6 +1121,7 @@
     }
 
     .contract-preview-sheet__signing-party-title {
+        margin: 0;
         color: #000;
         font-size: var(--sheet-font-subtitle);
         font-weight: 700;
@@ -952,6 +1141,7 @@
     }
 
     .contract-preview-sheet__signing-label {
+        margin: 0;
         color: rgba(0, 0, 0, 0.45);
         font-size: var(--sheet-font-label);
         line-height: 10pt;
@@ -970,7 +1160,7 @@
         display: block;
         width: auto;
         max-width: 100%;
-        height: 24mm;
+        height: 26mm;
         object-fit: contain;
     }
 

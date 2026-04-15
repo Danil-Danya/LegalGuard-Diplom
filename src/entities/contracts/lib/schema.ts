@@ -386,6 +386,55 @@ export const buildContractPayload = (
     };
 };
 
+export const buildContractTemplateData = (
+    template: TemplateDocument,
+    values: ContractFormValues,
+) => {
+    const templateSchema = template.templateSchema;
+
+    return {
+        head: Object.fromEntries(
+            Object.entries(templateSchema?.head ?? {}).map(([key, field]) => {
+                return [
+                    key,
+                    {
+                        ...field,
+                        text: normalizeTextValue(values[key]) || field.text,
+                    },
+                ];
+            }),
+        ),
+        body: (templateSchema?.body ?? []).map((section, sectionIndex) => ({
+            ...section,
+            text: normalizeTextValue(values[`body_${sectionIndex}_text`]) || section.text,
+            items: section.items.map((item, itemIndex) => ({
+                ...item,
+                text: normalizeTextValue(values[`body_${sectionIndex}_item_${itemIndex}_text`]) || item.text,
+            })),
+        })),
+        ground: {
+            parties: (templateSchema?.ground?.parties ?? []).map((party) => ({
+                ...party,
+                fields: party.fields.map((field, fieldIndex) => {
+                    if (isPartySignatureField(field.title) || isPartyStampField(field.title)) {
+                        const uploadedAsset = normalizeFileValue(values[getGroundAssetKey(party.key, fieldIndex)]);
+
+                        return {
+                            ...field,
+                            text: uploadedAsset?.name ?? '',
+                        };
+                    }
+
+                    return {
+                        ...field,
+                        text: normalizeTextValue(values[getGroundFieldKey(party.key, fieldIndex)]) || field.text,
+                    };
+                }),
+            })),
+        },
+    };
+};
+
 export const buildHintTemplateContext = (
     template: TemplateDocument,
     values: ContractFormValues,

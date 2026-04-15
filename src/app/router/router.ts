@@ -84,8 +84,9 @@ const router = createRouter({
             }
         },
         {
-            path: '/contracts/:template_name/contract_id/ready',
+            path: '/contracts/:template_name/:document_id/ready',
             name: 'contract-template-ready',
+            alias: '/contracts/:template_name/contract_id/ready',
             component: () => import('@/pages/ContractTemplateReady.vue'),
             meta: {
                 layout: 'contracts'

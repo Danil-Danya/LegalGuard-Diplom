@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia';
 
 import { buildContractInitialValues, buildContractStepSchemas } from '@/entities/contracts/lib/schema';
-import type { ContractFieldValue } from '@/entities/contracts/lib/types';
+import type { ContractCreatedDocument, ContractFieldValue } from '@/entities/contracts/lib/types';
 import type { TemplateDocument } from '@/entities/templates/lib/types';
 
 export const useContractStore = defineStore('contracts', {
     state: () => ({
         activeTemplateSlug: '',
         values: {} as Record<string, ContractFieldValue>,
+        createdDocument: null as ContractCreatedDocument | null,
     }),
 
     actions: {
@@ -17,6 +18,7 @@ export const useContractStore = defineStore('contracts', {
             if (this.activeTemplateSlug !== template.slug) {
                 this.activeTemplateSlug = template.slug;
                 this.values = initialValues;
+                this.createdDocument = null;
                 return;
             }
 
@@ -31,11 +33,21 @@ export const useContractStore = defineStore('contracts', {
 
         setFieldValue(key: string, value: ContractFieldValue) {
             this.values[key] = value;
+            this.createdDocument = null;
+        },
+
+        setCreatedDocument(document: ContractCreatedDocument) {
+            this.createdDocument = document;
+        },
+
+        clearCreatedDocument() {
+            this.createdDocument = null;
         },
 
         resetTemplate() {
             this.activeTemplateSlug = '';
             this.values = {};
+            this.createdDocument = null;
         },
     },
 });

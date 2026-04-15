@@ -17,7 +17,12 @@ api.interceptors.response.use((response) => {
         return response;
     }
 
-    if (response.data) {
+    const isBlobResponse = response.config.responseType === 'blob'
+        || (typeof Blob !== 'undefined' && response.data instanceof Blob);
+    const isArrayBufferResponse = response.config.responseType === 'arraybuffer'
+        || response.data instanceof ArrayBuffer;
+
+    if (response.data && !isBlobResponse && !isArrayBufferResponse) {
         response.data = convertKeysToCamelCase(response.data);
     }
 

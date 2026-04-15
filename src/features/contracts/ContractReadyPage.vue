@@ -3,7 +3,7 @@
         <Breadcrumbs :links="breadcrumbsLinks" />
 
         <div class="container">
-            <div v-if="resolvedTemplate" class="space-y-[24px]">
+            <div v-if="canRenderDocument" class="space-y-[24px]">
                 <div class="rounded-[22px] border border-[var(--color-border)] !m-[30px_0] bg-white !p-[24px] max-md:!p-[18px]">
                     <div class="flex flex-wrap items-start justify-between gap-[16px] border-b border-[var(--color-border)] pb-[20px]">
                         <div class="max-w-[720px]">
@@ -18,7 +18,7 @@
                             </p>
                         </div>
 
-                        <div class="rounded-full border border-[var(--color-primary-30)] bg-[var(--color-primary-10)] px-[14px] py-[8px] text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--color-primary)]">
+                        <div class="rounded-[10px] border !p-[5px_15px] border-[var(--color-primary-30)] bg-[var(--color-primary-10)] px-[14px] py-[8px] text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--color-primary)]">
                             Шаблон собран
                         </div>
                     </div>
@@ -27,13 +27,14 @@
                         <section class="hidden md:block">
                             <ContractPreviewSheet
                                 :party-files="partyFiles"
+                                :party-asset-sources="previewPartyAssetSources"
                                 :payload="previewPayload"
                             />
                         </section>
 
                         <aside class="space-y-[18px]">
                             <div class="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] !p-[20px]">
-                                <div class="rounded-full bg-[#F6EEDD] px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-primary)]">
+                                <div class="rounded-[10px] !p-[5px_15px] bg-[#F6EEDD] px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-primary)]">
                                     Юридическая проверка пройдена
                                 </div>
 
@@ -44,7 +45,7 @@
                                     Выберите формат сохранения готового шаблона.
                                 </p>
 
-                                <div class="!mt-[18px] space-y-[12px]">
+                                <div class="grid !mt-[18px] space-y-[12px] gap-[20px]">
                                     <button
                                         type="button"
                                         class="flex w-full items-center gap-[14px] rounded-[14px] border border-[var(--color-border)] bg-white !p-[16px] text-left transition-colors hover:border-[var(--color-primary-30)] hover:bg-[var(--color-primary-10)] disabled:cursor-not-allowed disabled:opacity-70"
@@ -95,7 +96,7 @@
                                 </div>
 
                                 <div class="!mt-[20px] border-t border-[var(--color-border)] pt-[18px]">
-                                    <div class="flex items-center justify-between gap-[12px] text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                                    <div class="flex !mt-[20px] items-center justify-between gap-[12px] text-[13px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
                                         <span>Генерация файла</span>
                                         <span>100%</span>
                                     </div>
@@ -136,7 +137,7 @@
             </div>
 
             <div
-                v-else-if="isLoadingTemplate"
+                v-else-if="isLoadingView"
                 class="rounded-[18px] border border-[var(--color-border)] bg-white p-[24px]"
             >
                 <h1 class="text-[32px] font-semibold text-[var(--color-text-primary)]">
@@ -157,6 +158,7 @@
                 <p class="mt-[12px] text-[16px] leading-[26px] text-[var(--color-text-secondary)]">
                     Для этого маршрута нет шаблона. Вернитесь к каталогу и выберите документ заново.
                 </p>
+                <ErrorMessage v-if="documentLoadError" :text="documentLoadError" />
                 <RouterLink
                     class="mt-[20px] inline-flex text-[16px] font-semibold text-[var(--color-primary)]"
                     to="/contracts/templates"
@@ -167,7 +169,7 @@
         </div>
 
         <div
-            v-if="resolvedTemplate"
+            v-if="canRenderDocument"
             class="fixed bottom-[102px] left-[15px] right-[15px] z-20 md:hidden"
         >
             <button
@@ -191,7 +193,7 @@
         </div>
 
         <div
-            v-if="resolvedTemplate"
+            v-if="canRenderDocument"
             class="fixed bottom-[15px] left-[15px] right-[15px] z-20 md:hidden"
         >
             <MobileChatTabbar />
@@ -227,6 +229,7 @@
                     <div class="flex-1 overflow-y-auto bg-[var(--color-surface)] p-[12px] !mt-[10px]">
                         <ContractPreviewSheet
                             :party-files="partyFiles"
+                            :party-asset-sources="previewPartyAssetSources"
                             :payload="previewPayload"
                         />
                     </div>
@@ -240,13 +243,17 @@
     import { computed, onBeforeUnmount, ref, watch } from 'vue';
     import { useRoute } from 'vue-router';
 
+    import { getDocumentById, getDocumentDocxFile, getDocumentPdfFile } from '@/entities/contracts/api/documents';
+    import { buildContractPartyAssetSourcesFromDocument, buildContractPayloadFromDocument, createEmptyContractPayload } from '@/entities/contracts/lib/document';
     import { downloadContractDoc, openContractPdfPrint, readFileAsDataUrl } from '@/entities/contracts/lib/export';
     import { buildContractPartyFiles, buildContractPayload } from '@/entities/contracts/lib/schema';
-    import type { ContractDocumentPayload } from '@/entities/contracts/lib/types';
+    import type { ContractCreatedDocument, ContractDocumentPayload, ContractPartyAssetSourcesMap, ContractPartyFilesMap } from '@/entities/contracts/lib/types';
     import { useContractStore } from '@/entities/contracts/models/store';
     import { useTemplatesStore } from '@/entities/templates/models/store';
+    import { getAuthRequestErrorMessage } from '@/entities/users/api/auth';
     import MobileChatTabbar from '@/shared/layout/MobileChatTabbar.vue';
     import Breadcrumbs from '@/shared/ui/Breadcrumbs.vue';
+    import ErrorMessage from '@/shared/ui/ErrorMessage.vue';
 
     import ContractPreviewSheet from './ContractPreviewSheet.vue';
 
@@ -257,10 +264,25 @@
     const isMobilePreviewOpen = ref(false);
     const isPdfExporting = ref(false);
     const isDocExporting = ref(false);
+    const isLoadingDocument = ref(false);
+    const documentLoadError = ref('');
+    const fetchedDocument = ref<ContractCreatedDocument | null>(null);
+    let documentRequestId = 0;
 
     const templateSlug = computed(() => {
         const routeValue = Array.isArray(route.params.template_name) ? route.params.template_name[0] : route.params.template_name;
         return routeValue || '';
+    });
+
+    const documentId = computed(() => {
+        const routeParamValue = Array.isArray(route.params.document_id) ? route.params.document_id[0] : route.params.document_id;
+
+        if (typeof routeParamValue === 'string' && routeParamValue.trim()) {
+            return routeParamValue;
+        }
+
+        const routeQueryValue = Array.isArray(route.query.documentId) ? route.query.documentId[0] : route.query.documentId;
+        return typeof routeQueryValue === 'string' ? routeQueryValue : '';
     });
 
     const template = computed(() => {
@@ -271,8 +293,30 @@
         return template.value?.templateSchema ? template.value : undefined;
     });
 
+    const activeDocument = computed(() => {
+        if (documentId.value) {
+            if (fetchedDocument.value?.id === documentId.value) {
+                return fetchedDocument.value;
+            }
+
+            if (contractStore.createdDocument?.id === documentId.value) {
+                return contractStore.createdDocument;
+            }
+        }
+
+        return fetchedDocument.value || contractStore.createdDocument;
+    });
+
     const isLoadingTemplate = computed(() => {
         return templatesStore.isLoadingTemplate;
+    });
+
+    const isLoadingView = computed(() => {
+        return isLoadingTemplate.value || isLoadingDocument.value;
+    });
+
+    const canRenderDocument = computed(() => {
+        return Boolean(activeDocument.value?.templateData || resolvedTemplate.value);
     });
 
     watch(templateSlug, async (nextSlug) => {
@@ -281,6 +325,48 @@
         }
 
         await templatesStore.fetchTemplateBySlug(nextSlug);
+    }, { immediate: true });
+
+    watch(documentId, async (nextDocumentId) => {
+        const requestId = documentRequestId + 1;
+        documentRequestId = requestId;
+        documentLoadError.value = '';
+
+        if (!nextDocumentId) {
+            fetchedDocument.value = null;
+            return;
+        }
+
+        if (contractStore.createdDocument?.id === nextDocumentId && contractStore.createdDocument.templateData) {
+            fetchedDocument.value = contractStore.createdDocument;
+            return;
+        }
+
+        isLoadingDocument.value = true;
+
+        try {
+            const document = await getDocumentById(nextDocumentId);
+
+            if (documentRequestId !== requestId) {
+                return;
+            }
+
+            fetchedDocument.value = document;
+            contractStore.setCreatedDocument(document);
+        }
+        catch (error) {
+            if (documentRequestId !== requestId) {
+                return;
+            }
+
+            fetchedDocument.value = null;
+            documentLoadError.value = getAuthRequestErrorMessage(error, 'Не удалось загрузить документ');
+        }
+        finally {
+            if (documentRequestId === requestId) {
+                isLoadingDocument.value = false;
+            }
+        }
     }, { immediate: true });
 
     watch(resolvedTemplate, (nextTemplate) => {
@@ -306,41 +392,50 @@
     });
 
     const breadcrumbsLinks = computed(() => {
-        if (!resolvedTemplate.value) {
+        if (resolvedTemplate.value) {
             return [
                 { path: '/', text: 'Домашняя' },
                 { path: '/contracts/templates', text: 'Шаблоны документов' },
+                { path: `/template/${resolvedTemplate.value.slug}`, text: resolvedTemplate.value.title },
+                { path: route.path, text: 'Документ готов' },
+            ];
+        }
+
+        if (activeDocument.value?.title) {
+            return [
+                { path: '/', text: 'Домашняя' },
+                { path: '/contracts/templates', text: 'Шаблоны документов' },
+                { path: route.path, text: activeDocument.value.title },
             ];
         }
 
         return [
             { path: '/', text: 'Домашняя' },
             { path: '/contracts/templates', text: 'Шаблоны документов' },
-            { path: `/template/${resolvedTemplate.value.slug}`, text: resolvedTemplate.value.title },
-            { path: route.path, text: 'Документ готов' },
         ];
     });
 
-    const previewPayload = computed(() => {
-        if (!resolvedTemplate.value) {
-            return {
-                templateSlug: '',
-                title: '',
-                documentDate: '',
-                documentPlace: '',
-                firstParty: '',
-                secondParty: '',
-                body: [],
-                parties: [],
-                signatureFileName: null,
-                attachmentFileName: null,
-            } as ContractDocumentPayload;
+    const previewPayload = computed<ContractDocumentPayload>(() => {
+        if (activeDocument.value?.templateData) {
+            return buildContractPayloadFromDocument(activeDocument.value, resolvedTemplate.value?.slug || templateSlug.value);
         }
 
-        return buildContractPayload(resolvedTemplate.value, contractStore.values);
+        if (resolvedTemplate.value) {
+            return buildContractPayload(resolvedTemplate.value, contractStore.values);
+        }
+
+        return createEmptyContractPayload();
     });
 
-    const partyFiles = computed(() => {
+    const previewPartyAssetSources = computed<ContractPartyAssetSourcesMap>(() => {
+        if (!activeDocument.value?.templateData) {
+            return {};
+        }
+
+        return buildContractPartyAssetSourcesFromDocument(activeDocument.value);
+    });
+
+    const partyFiles = computed<ContractPartyFilesMap>(() => {
         if (!resolvedTemplate.value) {
             return {};
         }
@@ -353,12 +448,33 @@
     });
 
     const exportFileName = computed(() => {
-        const baseName = previewPayload.value.templateSlug || previewPayload.value.title || 'document';
+        const baseName = previewPayload.value.templateSlug || previewPayload.value.title || activeDocument.value?.id || 'document';
         return `${baseName}.pdf`;
     });
 
+    const hasRemotePartyAssetSources = computed(() => {
+        return Object.keys(previewPartyAssetSources.value).length > 0;
+    });
+
+    const createFallbackFileName = (extension: 'pdf' | 'docx') => {
+        const baseName = previewPayload.value.templateSlug || previewPayload.value.title || activeDocument.value?.id || 'document';
+        return `${baseName}.${extension}`;
+    };
+
+    const downloadBlobFile = (blob: Blob, fileName: string) => {
+        const blobUrl = URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = blobUrl;
+        downloadLink.download = fileName;
+        downloadLink.click();
+
+        window.setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+        }, 1000);
+    };
+
     const createPartyObjectUrls = () => {
-        return Object.entries(partyFiles.value).reduce<Record<string, { signatureSrc?: string | null; stampSrc?: string | null }>>((result, [partyKey, files]) => {
+        return Object.entries(partyFiles.value).reduce<ContractPartyAssetSourcesMap>((result, [partyKey, files]) => {
             result[partyKey] = {
                 signatureSrc: files.signatureFile ? URL.createObjectURL(files.signatureFile) : null,
                 stampSrc: files.stampFile ? URL.createObjectURL(files.stampFile) : null,
@@ -368,7 +484,7 @@
         }, {});
     };
 
-    const revokePartyObjectUrls = (partyAssetSources: Record<string, { signatureSrc?: string | null; stampSrc?: string | null }>) => {
+    const revokePartyObjectUrls = (partyAssetSources: ContractPartyAssetSourcesMap) => {
         Object.values(partyAssetSources).forEach((sources) => {
             if (sources.signatureSrc) {
                 URL.revokeObjectURL(sources.signatureSrc);
@@ -398,7 +514,7 @@
             }),
         );
 
-        return Object.fromEntries(entries);
+        return Object.fromEntries(entries) as ContractPartyAssetSourcesMap;
     };
 
     const openMobilePreview = () => {
@@ -410,11 +526,37 @@
     };
 
     const handleExportPdf = async () => {
-        if (!resolvedTemplate.value || isPdfExporting.value) {
+        if (!canRenderDocument.value || isPdfExporting.value) {
             return;
         }
 
         isPdfExporting.value = true;
+
+        if (activeDocument.value?.id) {
+            try {
+                const file = await getDocumentPdfFile(activeDocument.value.id);
+
+                downloadBlobFile(file.blob, file.fileName || createFallbackFileName('pdf'));
+            }
+            finally {
+                isPdfExporting.value = false;
+            }
+
+            return;
+        }
+
+        if (hasRemotePartyAssetSources.value) {
+            try {
+                openContractPdfPrint(previewPayload.value, {
+                    partyAssetSources: previewPartyAssetSources.value,
+                });
+            }
+            finally {
+                isPdfExporting.value = false;
+            }
+
+            return;
+        }
 
         const partyAssetSources = createPartyObjectUrls();
 
@@ -433,14 +575,23 @@
     };
 
     const handleExportDoc = async () => {
-        if (!resolvedTemplate.value || isDocExporting.value) {
+        if (!canRenderDocument.value || isDocExporting.value) {
             return;
         }
 
         isDocExporting.value = true;
 
         try {
-            const partyAssetSources = await createPartyDataUrls();
+            if (activeDocument.value?.id) {
+                const file = await getDocumentDocxFile(activeDocument.value.id);
+
+                downloadBlobFile(file.blob, file.fileName || createFallbackFileName('docx'));
+                return;
+            }
+
+            const partyAssetSources = hasRemotePartyAssetSources.value
+                ? previewPartyAssetSources.value
+                : await createPartyDataUrls();
 
             downloadContractDoc(previewPayload.value, {
                 partyAssetSources,

@@ -96,9 +96,9 @@
                                 <p class="text-[16px] italic text-[var(--color-text-secondary)] max-md:text-[17px] max-md:leading-[28px]">
                                     "{{ template.quote }}"
                                 </p>
-                                <footer class="mt-[16px] text-[14px] font-semibold uppercase tracking-[0.18em] text-[var(--color-primary)]">
+                                <p class="mt-[16px] text-[14px] font-semibold uppercase tracking-[0.18em] text-[var(--color-primary)]">
                                     {{ template.quoteAuthor }}
-                                </footer>
+                                </p>
                             </blockquote>
                         </div>
 

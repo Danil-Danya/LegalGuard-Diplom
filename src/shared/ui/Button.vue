@@ -3,7 +3,7 @@
         :disabled="disabled"
         class="button inline-flex items-center justify-center rounded-[10px] text-[16px] leading-[20px] duration-[300ms] cursor-pointer transition-colors"
         :class="variantClass"
-        :style="{ padding: normalizedPadding }"
+        :style="buttonStyle"
     >
         {{ text }}
     </button>
@@ -16,9 +16,11 @@
         color: string;
         text: string;
         padding?: string;
+        paddingMd?: string;
         disabled?: boolean;
     }>(), {
         padding: '12px_32px',
+        paddingMd: '',
         disabled: false,
     });
 
@@ -30,7 +32,28 @@
         return 'bg-primary text-white hover:bg-accent';
     });
 
-    const normalizedPadding = computed(() => {
-        return props.padding.replaceAll('_', ' ');
+    const buttonStyle = computed(() => {
+        const base = props.padding.replaceAll('_', ' ');
+
+        if (!props.paddingMd) {
+            return {
+                padding: base,
+            };
+        }
+
+        const md = props.paddingMd.replaceAll('_', ' ');
+
+        return {
+            padding: base,
+            '--md-padding': md,
+        };
     });
 </script>
+
+<style scoped>
+@media (min-width: 768px) {
+    .button {
+        padding: var(--md-padding) !important;
+    }
+}
+</style>

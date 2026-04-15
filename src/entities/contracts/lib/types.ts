@@ -83,3 +83,47 @@ export interface ContractPartyFiles {
 }
 
 export type ContractPartyFilesMap = Record<string, ContractPartyFiles>;
+
+export interface ContractPartyAssetSource {
+    signatureSrc?: string | null;
+    stampSrc?: string | null;
+}
+
+export type ContractPartyAssetSourcesMap = Record<string, ContractPartyAssetSource>;
+
+export interface ContractTemplateDataHeadField {
+    title: string;
+    text: string;
+}
+
+export interface ContractTemplateDataGroundField {
+    title: string;
+    text: string;
+}
+
+export interface ContractTemplateDataGroundParty {
+    key: string;
+    title: string;
+    fields: ContractTemplateDataGroundField[];
+}
+
+export interface ContractTemplateData {
+    head?: Record<string, ContractTemplateDataHeadField>;
+    body?: ContractPayloadBodySection[];
+    ground?: {
+        parties?: ContractTemplateDataGroundParty[];
+    };
+    partyAssetSources?: ContractPartyAssetSourcesMap;
+}
+
+export interface ContractCreatedDocument {
+    id?: string;
+    userId?: string;
+    templateId?: string;
+    title?: string;
+    description?: string;
+    templateData?: ContractTemplateData | null;
+    createdAt?: string;
+    updatedAt?: string;
+    [key: string]: unknown;
+}

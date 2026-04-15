@@ -68,12 +68,25 @@
                                 </RouterLink>
 
                                 <RouterLink
+                                    v-if="step !== 3"
                                     :to="nextPath"
                                     class="inline-flex !p-[10px_30px] !text-white items-center justify-center rounded-[10px] bg-[var(--color-primary)] px-[22px] text-[15px] font-semibold text-white transition-colors hover:bg-accent"
                                 >
                                     {{ nextLabel }}
                                 </RouterLink>
+
+                                <button
+                                    v-else
+                                    type="button"
+                                    class="inline-flex !p-[10px_30px] !text-white items-center justify-center rounded-[10px] bg-[var(--color-primary)] px-[22px] text-[15px] font-semibold text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-70"
+                                    :disabled="isCompleting"
+                                    @click="handleComplete"
+                                >
+                                    {{ nextLabel }}
+                                </button>
                             </div>
+
+                            <ErrorMessage v-if="submitError" :text="submitError" />
                         </section>
 
                         <div class="hidden md:block">
@@ -189,14 +202,17 @@
 
 <script setup lang="ts">
     import { computed, onBeforeUnmount, ref, watch } from 'vue';
-    import { useRoute } from 'vue-router';
+    import { useRoute, useRouter } from 'vue-router';
 
-    import { buildContractPartyFiles, buildContractPayload, buildContractStepSchemas, buildHintTemplateContext } from '@/entities/contracts/lib/schema';
-    import type { ContractDocumentPayload, ContractFieldValue, ContractStep, ContractStepSchema } from '@/entities/contracts/lib/types';
+    import { createDocument } from '@/entities/contracts/api/documents';
+    import { buildContractPartyFiles, buildContractPayload, buildContractStepSchemas, buildHintTemplateContext, buildContractTemplateData } from '@/entities/contracts/lib/schema';
+    import type { ContractDocumentPayload, ContractFieldValue, ContractPartyFilesMap, ContractStep, ContractStepSchema } from '@/entities/contracts/lib/types';
     import { useContractStore } from '@/entities/contracts/models/store';
     import { useTemplatesStore } from '@/entities/templates/models/store';
+    import { getAuthRequestErrorMessage } from '@/entities/users/api/auth';
     import MobileChatTabbar from '@/shared/layout/MobileChatTabbar.vue';
     import Breadcrumbs from '@/shared/ui/Breadcrumbs.vue';
+    import ErrorMessage from '@/shared/ui/ErrorMessage.vue';
 
     import ContractFieldRenderer from './ContractFieldRenderer.vue';
     import ContractPreviewSheet from './ContractPreviewSheet.vue';
@@ -206,9 +222,12 @@
     }>();
 
     const route = useRoute();
+    const router = useRouter();
     const contractStore = useContractStore();
     const templatesStore = useTemplatesStore();
     const isMobilePreviewOpen = ref(false);
+    const isCompleting = ref(false);
+    const submitError = ref('');
 
     const templateSlug = computed(() => {
         const routeValue = Array.isArray(route.params.template_name) ? route.params.template_name[0] : route.params.template_name;
@@ -328,7 +347,7 @@
         return buildHintTemplateContext(resolvedTemplate.value, contractStore.values);
     });
 
-    const partyFiles = computed(() => {
+    const partyFiles = computed<ContractPartyFilesMap>(() => {
         if (!resolvedTemplate.value) {
             return {};
         }
@@ -386,6 +405,73 @@
 
     const closeMobilePreview = () => {
         isMobilePreviewOpen.value = false;
+    };
+
+    const createDocumentDescription = () => {
+        if (!resolvedTemplate.value) {
+            return previewPayload.value.title || 'Сформированный документ';
+        }
+
+        const parties = [previewPayload.value.firstParty, previewPayload.value.secondParty]
+            .map((value) => value.trim())
+            .filter(Boolean);
+        const partiesText = parties.length ? ` для ${parties.join(' и ')}.` : '.';
+
+        return `Документ "${previewPayload.value.title}" сформирован на основе шаблона "${resolvedTemplate.value.title}"${partiesText}`;
+    };
+
+    const resolvePartyUpload = (partyKeys: string[], assetKey: 'signatureFile' | 'stampFile') => {
+        for (const partyKey of partyKeys) {
+            const file = partyFiles.value[partyKey]?.[assetKey];
+
+            if (file) {
+                return file;
+            }
+        }
+
+        return null;
+    };
+
+    const handleComplete = async () => {
+        if (!resolvedTemplate.value || isCompleting.value) {
+            return;
+        }
+
+        submitError.value = '';
+        isCompleting.value = true;
+
+        try {
+            const createdDocument = await createDocument({
+                templateId: resolvedTemplate.value.id,
+                title: previewPayload.value.title,
+                description: createDocumentDescription(),
+                templateData: buildContractTemplateData(resolvedTemplate.value, contractStore.values),
+                person1Signature: resolvePartyUpload(['person1', 'person_1'], 'signatureFile'),
+                person1Stamp: resolvePartyUpload(['person1', 'person_1'], 'stampFile'),
+                person2Signature: resolvePartyUpload(['person2', 'person_2'], 'signatureFile'),
+                person2Stamp: resolvePartyUpload(['person2', 'person_2'], 'stampFile'),
+            });
+
+            contractStore.setCreatedDocument(createdDocument);
+            if (createdDocument.id) {
+                await router.push({
+                    name: 'contract-template-ready',
+                    params: {
+                        template_name: resolvedTemplate.value.slug,
+                        document_id: createdDocument.id,
+                    },
+                });
+            }
+            else {
+                await router.push(nextPath.value);
+            }
+        }
+        catch (error) {
+            submitError.value = getAuthRequestErrorMessage(error, 'Не удалось сохранить документ');
+        }
+        finally {
+            isCompleting.value = false;
+        }
     };
 </script>
 

@@ -1,9 +1,9 @@
 <template>
     <footer class="footer border-t border-[var(--color-border)] bg-white">
         <div class="container">
-            <div class="footer__content  h-[100px] mx-auto flex w-full max-w-[1440px] items-center gap-[28px] py-[18px] max-lg:flex-wrap max-lg:justify-between max-lg:gap-[20px] max-sm:py-[16px]">
-                <div class="footer__left shrink-0">
-                    <RouterLink to="/" class="flex items-center gap-[14px] text-[var(--color-text-primary)]">
+            <div class="footer__content !p-[30px_0] mx-auto flex w-full max-w-[1440px] items-center gap-[28px] py-[18px] max-lg:flex-wrap max-lg:justify-between max-lg:gap-[20px] max-sm:py-[16px]">
+                <div class="footer__left shrink-0 md:w-auto w-full">
+                    <RouterLink to="/" class="flex w-full justify-center items-center md:gap-[14px] text-[var(--color-text-primary)]">
                         <span class="flex h-[48px] w-[48px] items-center justify-center rounded-[14px] bg-[var(--color-primary-10)] p-[8px]">
                             <img src="@/assets/images/logo/logo.png" alt="Logo" class="footer__logo w-full">
                         </span>
@@ -19,9 +19,9 @@
                     <nav class="footer__nav">
                         <ul class="flex items-center gap-[28px] max-md:flex-wrap max-md:justify-center max-md:gap-x-[20px] max-md:gap-y-[10px]">
                             <li v-for="link in links" :key="`${link.path}-${link.text}`">
-                                <RouterLink :to="link.path" class="text-[15px] font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]">
+                                <a :href="link.path" class="text-[15px] font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]">
                                     {{ link.text }}
-                                </RouterLink>
+                                </a>
                             </li>
                         </ul>
                     </nav>
@@ -42,12 +42,12 @@
         },
 
         {
-            path: '/',
-            text: 'Контакты'
+            path: 'tel:+998908709948',
+            text: 'Телефон'
         },
 
         {
-            path: '/',
+            path: 'https://www.instagram.com/dani.elweb',
             text: 'Портфолио'
         },
     ])
